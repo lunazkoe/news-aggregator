@@ -1,4 +1,4 @@
-package com.lunazkoe.newsaggregator.config;
+package com.lunazkoe.newsaggregator.global.config;
 
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;

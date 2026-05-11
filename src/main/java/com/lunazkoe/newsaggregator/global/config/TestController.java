@@ -1,4 +1,4 @@
-package com.lunazkoe.newsaggregator.config;
+package com.lunazkoe.newsaggregator.global.config;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;

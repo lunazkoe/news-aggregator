@@ -1,4 +1,4 @@
-package com.lunazkoe.newsaggregator.config;
+package com.lunazkoe.newsaggregator.global.config;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
