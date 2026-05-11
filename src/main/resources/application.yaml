@@ -1,0 +1,9 @@
+spring:
+  application:
+    name: news-aggregator
+  profiles:
+    active: dev
+
+logging:
+  level:
+    root: info
