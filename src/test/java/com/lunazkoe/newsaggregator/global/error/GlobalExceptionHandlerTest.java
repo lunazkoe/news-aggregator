@@ -28,7 +28,7 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    @DisplayName("서버 내부 에러 발생 시 500 에러 규격으로 응답해야 한다")
+    @DisplayName("서버 내부 에러 발생 시 500 에러 규격으로 응답해야 한다.")
     void serverErrorTest() throws Exception {
         // RuntimeException이 발생하도록 설계된 엔드포인트 호출
         mockMvc.perform(get("/api/test/server-error"))
