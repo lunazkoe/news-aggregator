@@ -27,6 +27,11 @@ public class UserService {
      */
     @Transactional
     public UserDto register(UserRegisterRequest request) {
+        // 이메일이 존재하는지 확인
+        // - @SQLRestriction("is_deleted = false")
+        // - 이게 켜져있어서 논리적으로 삭제된 경우 조회가 되지 않음
+        // - 따라서 새로 생성됨 (추후 User를 복구하는 로직으로 변경해도 됨)
+        // - 참고로 새로 생성되는 로직이 실행되는 이유는 DB에 CREATE UNIQUE INDEX uk_user_email ON users (email) WHERE is_deleted = false; 반드시 있어야함
         if (userRepository.existsByEmail(request.email())) {
             throw new UserException(UserErrorCode.EMAIL_ALREADY_EXISTS);
         }
@@ -51,12 +56,10 @@ public class UserService {
     @Transactional(readOnly = true)
     public UserDto login(UserLoginRequest request) {
         User foundUser = userRepository.findByEmail(request.email())
-                .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new UserException(UserErrorCode.EMAIL_OR_PASSWORD_INVALID));
 
         if (!foundUser.getPassword().equals(request.password())) {
-            throw new UserException(UserErrorCode.INVALID_PASSWORD);
-            // - 사실 비밀번호가 잘못되었다고 알려주는 것은 좋은게 아니라고 하긴하는데
-            // - 근데 꼭 그렇지만은 않은 것 같기도?
+            throw new UserException(UserErrorCode.EMAIL_OR_PASSWORD_INVALID);
         }
 
         log.info("User login successfully, UserId: {}", foundUser.getId());
@@ -68,7 +71,10 @@ public class UserService {
      * 사용자 정보(닉네임 수정)
      */
     @Transactional
-    public UserDto updateNickName(UUID userId, UserUpdateRequest request) {
+    public UserDto updateNickName(UUID userId, UserUpdateRequest request, UUID requestUserId) {
+
+        validateAuthorized(userId, requestUserId);
+
         User foundUser = userRepository.findById(userId)
                 .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
 
@@ -82,7 +88,10 @@ public class UserService {
      * 논리 삭제
      */
     @Transactional
-    public void delete(UUID userId) {
+    public void softDelete(UUID userId, UUID requestUserId) {
+
+        validateAuthorized(userId, requestUserId);
+
         User foundUser = userRepository.findById(userId)
                 .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
 
@@ -103,17 +112,27 @@ public class UserService {
      * - 지금은 그냥 이대로 유지. 바로 완전 삭제를 한다는 의미로만 남겨두기
      */
     @Transactional
-    public void hardDelete(UUID userId) {
+    public void hardDelete(UUID userId, UUID requestUserId) {
+
+        validateAuthorized(userId, requestUserId);
         // 여기서의 고민 포인트는
         // - 이 물리적 삭제를 할 때, SQLRestriction을 걸어놔서 논리 삭제가 되어있으면 삭제가 안될텐데
         // - 다만 요구사항에 논리 삭제 이후 시간이 지나면 완전 삭제일 경우를 생각해볼 수 있는데
         // - 그러면 즉시 삭제가 없다는거니깐, hardDeleteById여기에 조건은 추가해야되지 않나라는 생각
         //      - where id = :id and is_deleted = true 인경우만 삭제하게 해야되는거 아닌가?
-        User foundUser = userRepository.findById(userId)
-                .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
-        // - 이게 있으면 이 메서드는 SQLRestriction때문에 is_deleted = false인 대상에 대해서만 삭제가 가능한 구조임
+//        User foundUser = userRepository.findById(userId)
+//                .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
+//        // - 이게 있으면 이 메서드는 SQLRestriction때문에 is_deleted = false인 대상에 대해서만 삭제가 가능한 구조임
+//
+//        userRepository.hardDeleteById(userId);
+        userRepository.deleteById(userId);
 
-        userRepository.hardDeleteById(userId);
         log.info("User hard delete successfully. UserId: {}", userId);
+    }
+
+    private void validateAuthorized(UUID userId, UUID requestId) {
+        if (!userId.equals(requestId)) {
+            throw new UserException(UserErrorCode.UNAUTHORIZED_ACTION);
+        }
     }
 }
