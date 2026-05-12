@@ -109,8 +109,9 @@ public class UserService {
         // - 다만 요구사항에 논리 삭제 이후 시간이 지나면 완전 삭제일 경우를 생각해볼 수 있는데
         // - 그러면 즉시 삭제가 없다는거니깐, hardDeleteById여기에 조건은 추가해야되지 않나라는 생각
         //      - where id = :id and is_deleted = true 인경우만 삭제하게 해야되는거 아닌가?
-//        User foundUser = userRepository.findById(userId)
-//                .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
+        User foundUser = userRepository.findById(userId)
+                .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
+        // - 이게 있으면 이 메서드는 SQLRestriction때문에 is_deleted = false인 대상에 대해서만 삭제가 가능한 구조임
 
         userRepository.hardDeleteById(userId);
         log.info("User hard delete successfully. UserId: {}", userId);
