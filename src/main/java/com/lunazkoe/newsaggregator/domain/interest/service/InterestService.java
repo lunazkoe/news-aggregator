@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Map;
 import java.util.UUID;
 
 @Slf4j
@@ -28,7 +29,7 @@ public class InterestService {
         // 중복 이름 검증 (유사도 기반)
         if (interestRepository.existsBySimilarName(request.name())) {
             log.warn("Interest name already exists: {}", request.name());
-            throw new InterestException(InterestErrorCode.EXIST_SIMILARITY_NAME);
+            throw new InterestException(InterestErrorCode.EXIST_SIMILARITY_NAME, Map.of("name", request.name()));
         }
 
         Interest newInterest = Interest.builder()
@@ -50,7 +51,7 @@ public class InterestService {
         Interest foundInterest = interestRepository.findById(interestId)
                 .orElseThrow(() -> {
                     log.warn("Interest not found with ID: {}", interestId);
-                    return new InterestException(InterestErrorCode.INTEREST_NOT_FOUND);
+                    return new InterestException(InterestErrorCode.INTEREST_NOT_FOUND, Map.of("id", interestId));
                 });
 
         foundInterest.updateKeywords(request.keywords());
@@ -69,7 +70,7 @@ public class InterestService {
         Interest foundInterest = interestRepository.findById(interestId)
                 .orElseThrow(() -> {
                     log.warn("Interest not found with ID: {}", interestId);
-                    return new InterestException(InterestErrorCode.INTEREST_NOT_FOUND);
+                    return new InterestException(InterestErrorCode.INTEREST_NOT_FOUND, Map.of("id", interestId));
                 });
 
         interestRepository.delete(foundInterest);

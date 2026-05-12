@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Map;
 import java.util.UUID;
 
 @Slf4j
@@ -33,7 +34,7 @@ public class UserService {
         // - 따라서 새로 생성됨 (추후 User를 복구하는 로직으로 변경해도 됨)
         // - 참고로 새로 생성되는 로직이 실행되는 이유는 DB에 CREATE UNIQUE INDEX uk_user_email ON users (email) WHERE is_deleted = false; 반드시 있어야함
         if (userRepository.existsByEmail(request.email())) {
-            throw new UserException(UserErrorCode.EMAIL_ALREADY_EXISTS);
+            throw new UserException(UserErrorCode.EMAIL_ALREADY_EXISTS, Map.of("email", request.email()));
         }
 
         // TODO: 실제 사용 환경에서는 PasswordEncoder로 암호화를 해주어야함(BCrypt)
@@ -76,7 +77,7 @@ public class UserService {
         validateAuthorized(userId, requestUserId);
 
         User foundUser = userRepository.findById(userId)
-                .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND, Map.of("id", userId)));
 
         foundUser.updateNickName(request.nickname());
         log.info("User nickname updated: UserId: {}", foundUser.getId());
@@ -93,7 +94,7 @@ public class UserService {
         validateAuthorized(userId, requestUserId);
 
         User foundUser = userRepository.findById(userId)
-                .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND, Map.of("id", userId)));
 
 //        userRepository.delete(foundUser); // 여기서 Update 쿼리로 변화되어서 실행됨
         // - 여기서 deleteById를 사용하지 않은 이유
@@ -121,7 +122,7 @@ public class UserService {
         // - 그러면 즉시 삭제가 없다는거니깐, hardDeleteById여기에 조건은 추가해야되지 않나라는 생각
         //      - where id = :id and is_deleted = true 인경우만 삭제하게 해야되는거 아닌가?
         User foundUser = userRepository.findById(userId)
-                .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND, Map.of("id", userId)));
 //        // - 이게 있으면 이 메서드는 SQLRestriction때문에 is_deleted = false인 대상에 대해서만 삭제가 가능한 구조임
 //
 //        userRepository.hardDeleteById(userId);

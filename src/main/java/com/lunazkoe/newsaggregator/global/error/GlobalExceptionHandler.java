@@ -18,7 +18,7 @@ public class GlobalExceptionHandler {
         log.warn("[MonewException] Code: {}, Message: {}", errorCode.getCode(), errorCode.getMessage());
 
         return ResponseEntity.status(errorCode.getHttpStatus())
-                .body(ErrorResponse.of(errorCode));
+                .body(ErrorResponse.of(errorCode, e));
     }
 
     // 입력값 검증(Bean Validation) 실패 예외 처리
@@ -29,7 +29,7 @@ public class GlobalExceptionHandler {
         log.warn("[ValidationException] Message: {}", errorMessage);
 
         return ResponseEntity.status(GlobalErrorCode.BAD_REQUEST.getHttpStatus())
-                .body(ErrorResponse.of(GlobalErrorCode.BAD_REQUEST.getCode(), errorMessage));
+                .body(ErrorResponse.of(GlobalErrorCode.BAD_REQUEST, errorMessage, e));
     }
 
     // 예상치 못한 서버 내부 오류 처리
@@ -38,7 +38,7 @@ public class GlobalExceptionHandler {
         log.error("[UnhandledException] Message: {}", e.getMessage(), e);
 
         return ResponseEntity.status(GlobalErrorCode.INTERNAL_SERVER_ERROR.getHttpStatus())
-                .body(ErrorResponse.of(GlobalErrorCode.INTERNAL_SERVER_ERROR));
+                .body(ErrorResponse.of(GlobalErrorCode.INTERNAL_SERVER_ERROR, e));
     }
 }
 
