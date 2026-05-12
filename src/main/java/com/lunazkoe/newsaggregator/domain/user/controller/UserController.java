@@ -49,7 +49,7 @@ public class UserController {
     @DeleteMapping("/{userId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "사용자 논리 삭제", description = "사용자를 논리적으로 삭제합니다.")
-    public void deleteUser(@Parameter(description = "사용자 ID") @PathVariable("userId") UUID userId, @RequestHeader(HEADER_USER_ID) UUID requestId) {
+    public void softDeleteUser(@Parameter(description = "사용자 ID") @PathVariable("userId") UUID userId, @RequestHeader(HEADER_USER_ID) UUID requestId) {
         log.info("Received soft delete request for userId: {}", userId);
         userService.softDelete(userId, requestId);
     }
