@@ -5,6 +5,7 @@ import com.lunazkoe.newsaggregator.domain.user.dto.request.UserRegisterRequest;
 import com.lunazkoe.newsaggregator.domain.user.dto.request.UserUpdateRequest;
 import com.lunazkoe.newsaggregator.domain.user.dto.response.UserDto;
 import com.lunazkoe.newsaggregator.domain.user.service.UserService;
+import com.lunazkoe.newsaggregator.global.filter.MDCLoggingFilter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -15,6 +16,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
+
+import static com.lunazkoe.newsaggregator.global.filter.MDCLoggingFilter.*;
 
 @Slf4j
 @RestController
@@ -46,9 +49,9 @@ public class UserController {
     @DeleteMapping("/{userId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "사용자 논리 삭제", description = "사용자를 논리적으로 삭제합니다.")
-    public void deleteUser(@Parameter(description = "사용자 ID") @PathVariable("userId") UUID userId) {
+    public void deleteUser(@Parameter(description = "사용자 ID") @PathVariable("userId") UUID userId, @RequestHeader(HEADER_USER_ID) UUID requestId) {
         log.info("Received soft delete request for userId: {}", userId);
-        userService.delete(userId);
+        userService.softDelete(userId, requestId);
     }
 
     @PatchMapping("/{userId}")
@@ -56,18 +59,19 @@ public class UserController {
     @Operation(summary = "사용자 정보 수정", description = "사용자의 닉네임을 수정합니다.")
     public UserDto updateUserNickName(
             @Parameter(description = "사용자 ID") @PathVariable("userId") UUID userId,
-            @Valid @RequestBody UserUpdateRequest request
+            @Valid @RequestBody UserUpdateRequest request,
+            @RequestHeader(HEADER_USER_ID) UUID requestId
     ) {
         log.info("Received update request for userId: {}", userId);
-        UserDto response = userService.updateNickName(userId, request);
+        UserDto response = userService.updateNickName(userId, request, requestId);
         return response;
     }
 
     @DeleteMapping("/{userId}/hard")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "사용자 물리 삭제", description = "사용자를 물리적으로 삭제합니다.")
-    public void hardDeleteUser(@Parameter(description = "사용자 ID") @PathVariable("userId") UUID userId) {
+    public void hardDeleteUser(@Parameter(description = "사용자 ID") @PathVariable("userId") UUID userId, @RequestHeader(HEADER_USER_ID) UUID requestId) {
         log.info("Received hard delete request for userId: {}", userId);
-        userService.hardDelete(userId);
+        userService.hardDelete(userId, requestId);
     }
 }
