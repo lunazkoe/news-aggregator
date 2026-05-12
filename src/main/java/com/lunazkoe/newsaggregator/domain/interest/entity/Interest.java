@@ -30,8 +30,6 @@ public class Interest extends BaseTimeEntity {
     @Column(nullable = false, unique = true, length = 50)
     private String name;
 
-    @Builder.Default
-    // - 기본 초기화 값을 빌더에서도 유지되도록 함
     @JdbcTypeCode(SqlTypes.ARRAY)
     // - Hibernate 6 기능: PostgreSQL의 배열 타입(varchar[])와 Java의 List를 쉽게 매핑
     @Column(columnDefinition = "varchar[]")
@@ -49,7 +47,9 @@ public class Interest extends BaseTimeEntity {
     @Builder
     public Interest(String name, List<String> keywords) {
         this.name = name;
-        this.keywords = keywords;
+        this.keywords = keywords != null ? keywords : new ArrayList<>();
+        this.subscriberCount = 0;
+        this.isDeleted = false;
     }
 
     public void updateKeywords(List<String> keywords) {
