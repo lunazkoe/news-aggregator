@@ -23,7 +23,7 @@ public class MDCLoggingFilter extends OncePerRequestFilter {
     private final String CLIENT_IP = "clientIp";
     private final String USER_ID = "userId";
     private final String HEADER_REQUEST_ID = "X-Request-Id";
-    private final String HEADER_USER_ID = "MoNew-Request-User-ID"; // 기획안 명세 반영
+    public final static String HEADER_USER_ID = "MoNew-Request-User-ID"; // 기획안 명세 반영
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
