@@ -17,7 +17,6 @@ import java.util.UUID;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class InterestService {
 
     private final InterestRepository interestRepository;
@@ -26,7 +25,7 @@ public class InterestService {
     public InterestDto register(InterestRegisterRequest request) {
         log.info("Registering new interest: {}", request.name());
 
-        // 중복 이름 검증
+        // 중복 이름 검증 (유사도 기반)
         if (interestRepository.existsBySimilarName(request.name())) {
             log.warn("Interest name already exists: {}", request.name());
             throw new InterestException(InterestErrorCode.EXIST_SIMILARITY_NAME);
@@ -40,7 +39,8 @@ public class InterestService {
         Interest savedInterest = interestRepository.save(newInterest);
 
         // 등록 직후이므로 구독 여부는 false로 설정
-        return InterestDto.from(savedInterest, false);
+        return InterestDto.from(savedInterest, null);
+        // - 왜 인지 모르겠지만 null로 반환이 되네
     }
 
     @Transactional
@@ -53,8 +53,9 @@ public class InterestService {
                     return new InterestException(InterestErrorCode.INTEREST_NOT_FOUND);
                 });
 
-        foundInterest.getKeywords().clear();
-        foundInterest.getKeywords().addAll(request.keywords());
+        foundInterest.updateKeywords(request.keywords());
+//        foundInterest.getKeywords().clear();
+//        foundInterest.getKeywords().addAll(request.keywords());
 
         // TODO: 구독 여부를 확인하는 로직은 아직 안함
         // - 현재는 임시로 false 반환
@@ -78,4 +79,10 @@ public class InterestService {
     //     TODO: Day 4 / Day 5 커서 기반 페이징 구현 시 작성
     //     return null;
     // }
+
+    // TODO
+    // - 관심사 목록 조회
+    // - 관심사 구독
+    // - 관심사 구독 취소
+    // - **구독에 대한 처리**
 }

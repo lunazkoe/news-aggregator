@@ -13,7 +13,7 @@ public record InterestDto(
         Boolean subscribedByMe
 ) {
     // 팩토리 메서드를 만들어두면 Service 계층에서 변환하기 매우 편해집니다.
-    public static InterestDto from(Interest interest, boolean subscribedByMe) {
+    public static InterestDto from(Interest interest, Boolean subscribedByMe) {
         return new InterestDto(
                 interest.getId(),
                 interest.getName(),
