@@ -5,6 +5,8 @@ import com.lunazkoe.newsaggregator.domain.interest.entity.Interest;
 import com.lunazkoe.newsaggregator.global.common.dto.CursorPageResponse;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.core.types.dsl.Expressions;
+import com.querydsl.core.types.dsl.StringTemplate;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
@@ -78,7 +80,16 @@ public class InterestRepositoryImpl implements InterestRepositoryCustom {
         if (keyword == null || keyword.isBlank()) {
             return null;
         }
-        return interest.name.containsIgnoreCase(keyword);
+        BooleanExpression nameMatch = interest.name.containsIgnoreCase(keyword);
+
+        StringTemplate keywordsAsString = Expressions.stringTemplate(
+                "function('array_to_string', {0}, ',')", interest.keywords
+        );
+        // - function('array_to_string', ...) 부분이 실행되면서 DB 내부적으로 "축구,농구,야구"라는 하나의 문자열로 변환
+        // - .containsIgnoreCase("농구")가 이 문자열에 대해 LIKE '%농구%' 쿼리
+        BooleanExpression keywordMatch = keywordsAsString.containsIgnoreCase(keyword);
+
+        return nameMatch.or(keywordMatch);
     }
 
     private BooleanExpression cursorCondition(String orderBy, String direction, String cursor, String after) {
