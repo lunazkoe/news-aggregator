@@ -1,5 +1,6 @@
 package com.lunazkoe.newsaggregator.domain.article.service;
 
+import com.lunazkoe.newsaggregator.domain.article.dto.request.ArticleSearchCondition;
 import com.lunazkoe.newsaggregator.domain.article.dto.response.ArticleDto;
 import com.lunazkoe.newsaggregator.domain.article.entity.Article;
 import com.lunazkoe.newsaggregator.domain.article.entity.ArticleView;
@@ -11,14 +12,14 @@ import com.lunazkoe.newsaggregator.domain.user.entity.User;
 import com.lunazkoe.newsaggregator.domain.user.exception.UserErrorCode;
 import com.lunazkoe.newsaggregator.domain.user.exception.UserException;
 import com.lunazkoe.newsaggregator.domain.user.repository.UserRepository;
+import com.lunazkoe.newsaggregator.global.common.dto.CursorPageResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 @Slf4j
 @Service
@@ -74,6 +75,46 @@ public class ArticleService {
         articleRepository.delete(foundArticle);
 
         log.info("Successfully hard deleted article - Article ID: {}", articleId);
+    }
+
+    @Transactional(readOnly = true)
+    public CursorPageResponse<ArticleDto> searchArticles(ArticleSearchCondition condition, UUID requestUserId) {
+        CursorPageResponse<Article> pageResult = articleRepository.searchArticles(condition);
+        List<Article> articles = pageResult.content();
+
+        Set<UUID> viewedArticleIds;
+        if (requestUserId != null && !articles.isEmpty()) {
+            // 현재 페이지의 기사 ID 목록만 추출
+            List<UUID> articleIds = articles.stream().map(Article::getId).toList();
+
+            // IN 쿼리로 사용자가 읽은 기사 ID만 한 번에 가져와서 set에 담음
+            viewedArticleIds = articleViewRepository.findViewedArticleIds(requestUserId, articleIds);
+        } else {
+            viewedArticleIds = new HashSet<>();
+        }
+
+        List<ArticleDto> dtos = articles.stream()
+                .map(article -> new ArticleDto(
+                        article.getId(),
+                        article.getSource(),
+                        article.getSourceUrl(),
+                        article.getTitle(),
+                        article.getPublishDate(),
+                        article.getSummary(),
+                        article.getCommentCount(),
+                        article.getViewCount(),
+                        viewedArticleIds.contains(article.getId())
+                ))
+                .toList();
+
+        return new CursorPageResponse<>(
+                dtos,
+                pageResult.nextCursor(),
+                pageResult.nextAfter(),
+                pageResult.size(),
+                pageResult.totalElements(),
+                pageResult.hasNext()
+        );
     }
 
     private  User foundUser(UUID userId) {
