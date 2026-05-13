@@ -16,12 +16,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Map;
 import java.util.UUID;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class CommentService {
 
     private final CommentRepository commentRepository;
@@ -47,17 +47,14 @@ public class CommentService {
     }
 
     @Transactional
-    public CommentDto update(UUID commentId, UUID requestUserId, CommentUpdateRequest request) {
-        log.info("Updating comment ID: {}, requested by user: {}", commentId, requestUserId);
+    public CommentDto update(UUID commentId, CommentUpdateRequest request) {
+        log.info("Updating comment ID: {}", commentId);
 
         Comment foundComment = findCommentOrThrow(commentId);
 
-        // 수정 권한 확인
-        validateCommentOwner(foundComment, requestUserId);
-
         foundComment.updateContent(request.content());
 
-        User foundUser = userRepository.findById(requestUserId)
+        User foundUser = userRepository.findById(foundComment.getUserId())
                 .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
         // 이때는 좋아요 여부를 확인해야함
         // - TODO: 종아요 여부는 아직 처리 안 함
@@ -65,11 +62,10 @@ public class CommentService {
     }
 
     @Transactional
-    public void softDelete(UUID commentId, UUID requestUserId) {
+    public void softDelete(UUID commentId) {
         log.info("Logically deleting comment ID: {}", commentId);
 
         Comment foundComment = findCommentOrThrow(commentId);
-        validateCommentOwner(foundComment, requestUserId);
 
         foundComment.softDelete();
     }
@@ -96,7 +92,7 @@ public class CommentService {
         return commentRepository.findById(commentId)
                 .orElseThrow(() -> {
                     log.warn("Comment not found with ID: {}", commentId);
-                    return new CommentException(CommentErrorCode.COMMENT_NOT_FOUND);
+                    return new CommentException(CommentErrorCode.COMMENT_NOT_FOUND, Map.of("id", commentId));
                 });
     }
 
