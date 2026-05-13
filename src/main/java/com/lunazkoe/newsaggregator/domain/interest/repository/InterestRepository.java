@@ -7,7 +7,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.UUID;
 
-public interface InterestRepository extends JpaRepository<Interest, UUID> {
+public interface InterestRepository extends JpaRepository<Interest, UUID>, InterestRepositoryCustom {
     boolean existsByName(String name);
 
     @Query(value = "SELECT EXISTS (SELECT 1 FROM interests i WHERE similarity(i.name, :name) >= 0.8 AND i.is_deleted = false)", nativeQuery = true)

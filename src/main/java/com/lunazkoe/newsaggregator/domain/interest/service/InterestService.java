@@ -3,15 +3,18 @@ package com.lunazkoe.newsaggregator.domain.interest.service;
 import com.lunazkoe.newsaggregator.domain.interest.dto.request.InterestRegisterRequest;
 import com.lunazkoe.newsaggregator.domain.interest.dto.request.InterestUpdateRequest;
 import com.lunazkoe.newsaggregator.domain.interest.dto.response.InterestDto;
+import com.lunazkoe.newsaggregator.domain.interest.dto.request.InterestSearchCondition;
 import com.lunazkoe.newsaggregator.domain.interest.entity.Interest;
 import com.lunazkoe.newsaggregator.domain.interest.exception.InterestErrorCode;
 import com.lunazkoe.newsaggregator.domain.interest.exception.InterestException;
 import com.lunazkoe.newsaggregator.domain.interest.repository.InterestRepository;
+import com.lunazkoe.newsaggregator.global.common.dto.CursorPageResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -76,10 +79,29 @@ public class InterestService {
         interestRepository.delete(foundInterest);
     }
 
-    // public CursorPageResponseInterestDto search(...) {
-    //     TODO: Day 4 / Day 5 커서 기반 페이징 구현 시 작성
-    //     return null;
-    // }
+    @Transactional(readOnly = true)
+    public CursorPageResponse<InterestDto> searchInterests(
+            InterestSearchCondition condition,
+            UUID userId
+    ) {
+        log.info("Searching interests with condition: {}", condition);
+
+        CursorPageResponse<Interest> pageResponse = interestRepository.searchInterests(condition);
+
+        // TODO: 구독 도메인 구현 후, userId를 기반으로 해당 관심사를 구독했는지 확인 - 이때 userId를 사용
+        List<InterestDto> dtoList = pageResponse.content().stream()
+                .map(interest -> InterestDto.from(interest, false))
+                .toList();// 임시로 false 반환 중
+
+        return new CursorPageResponse<>(
+                dtoList,
+                pageResponse.nextCursor(),
+                pageResponse.nextAfter(),
+                pageResponse.size(),
+                pageResponse.totalElements(),
+                pageResponse.hasNext()
+        );
+    }
 
     // TODO
     // - 관심사 목록 조회

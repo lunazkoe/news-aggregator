@@ -1,12 +1,11 @@
 package com.lunazkoe.newsaggregator.global.common.dto;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 public record CursorPageResponse<T>(
         List<T> content,
         String nextCursor, // String으로 해서 어떤 cursor든 담을 수 있음
-        LocalDateTime nextAfter, // 날짜 기반 보조 커서용
+        String nextAfter, // 보조 커서용
         int size,
         long totalElements,
         boolean hasNext

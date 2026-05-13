@@ -1,9 +1,11 @@
 package com.lunazkoe.newsaggregator.domain.interest.controller;
 
+import com.lunazkoe.newsaggregator.domain.interest.dto.request.InterestSearchCondition;
 import com.lunazkoe.newsaggregator.domain.interest.service.InterestService;
 import com.lunazkoe.newsaggregator.domain.interest.dto.request.InterestRegisterRequest;
 import com.lunazkoe.newsaggregator.domain.interest.dto.request.InterestUpdateRequest;
 import com.lunazkoe.newsaggregator.domain.interest.dto.response.InterestDto;
+import com.lunazkoe.newsaggregator.global.common.dto.CursorPageResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +15,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
+import static com.lunazkoe.newsaggregator.global.filter.MDCLoggingFilter.*;
+
 @Slf4j
 @RestController
 @RequestMapping("/api/interests")
@@ -20,6 +24,19 @@ import java.util.UUID;
 public class InterestController {
 
     private final InterestService interestService;
+
+    @GetMapping()
+    @ResponseStatus(HttpStatus.OK)
+    @Operation(summary = "관심사 목록 조회", description = "조건에 맞는 관심사 목록을 조회합니다.")
+    public CursorPageResponse<InterestDto> searchInterests(
+            @ModelAttribute InterestSearchCondition condition,
+            @RequestHeader(HEADER_USER_ID) UUID requestUserId
+    ) {
+        log.info("Request to search interests. keyword: {}, orderBy: {}", condition.keyword(), condition.orderBy());
+
+        CursorPageResponse<InterestDto> response = interestService.searchInterests(condition, requestUserId);
+        return response;
+    }
 
     @PostMapping()
     @ResponseStatus(HttpStatus.CREATED)

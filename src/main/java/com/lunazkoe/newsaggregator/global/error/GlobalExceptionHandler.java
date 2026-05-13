@@ -3,9 +3,13 @@ package com.lunazkoe.newsaggregator.global.error;
 import com.lunazkoe.newsaggregator.global.error.exception.MonewException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.BindException;
+import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import java.util.stream.Collectors;
 
 @Slf4j
 @RestControllerAdvice
@@ -21,11 +25,12 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of(errorCode, e));
     }
 
-    // 입력값 검증(Bean Validation) 실패 예외 처리
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ErrorResponse> handleValidationException(MethodArgumentNotValidException e) {
-        // 여러 에러 중 첫 번째 에러 메시지만 추출하여 반환
-        String errorMessage = e.getBindingResult().getAllErrors().get(0).getDefaultMessage();
+    // 입력값 검증(Bean Validation) 실패 예외 처리(@RequestBody / @ModelAttribute)
+    @ExceptionHandler(BindException.class)
+    public ResponseEntity<ErrorResponse> handleValidationException(BindException e) {
+        String errorMessage = e.getBindingResult().getFieldErrors().stream()
+                .map(FieldError::getDefaultMessage)
+                .collect(Collectors.joining(", "));
         log.warn("[ValidationException] Message: {}", errorMessage);
 
         return ResponseEntity.status(GlobalErrorCode.BAD_REQUEST.getHttpStatus())

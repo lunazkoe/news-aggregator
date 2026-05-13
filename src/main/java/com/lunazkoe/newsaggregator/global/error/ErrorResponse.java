@@ -1,7 +1,7 @@
 package com.lunazkoe.newsaggregator.global.error;
 
 import com.lunazkoe.newsaggregator.global.error.exception.MonewException;
-import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.validation.BindException;
 
 import java.time.Instant;
 import java.util.Map;
@@ -25,7 +25,7 @@ public record ErrorResponse(
         );
     }
 
-    public static ErrorResponse of(ErrorCode errorCode, String message, MethodArgumentNotValidException e) {
+    public static ErrorResponse of(ErrorCode errorCode, String message, BindException e) {
         return new ErrorResponse(
                 Instant.now(),
                 errorCode.getCode(),
