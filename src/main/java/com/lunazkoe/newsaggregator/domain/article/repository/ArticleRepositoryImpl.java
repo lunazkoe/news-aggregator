@@ -13,10 +13,13 @@
     import org.springframework.util.StringUtils;
 
     import java.time.LocalDateTime;
+    import java.time.ZonedDateTime;
     import java.util.List;
     import java.util.UUID;
 
     import static com.lunazkoe.newsaggregator.domain.article.entity.QArticle.article;
+
+    // TODO: 관심사 interest와 artcle 간의 관게가 지금 없음
 
     @RequiredArgsConstructor
     public class ArticleRepositoryImpl implements ArticleRepositoryCustom {
@@ -162,7 +165,12 @@
                 // 기본값: publishDate 정렬
                 default -> {
                     if (!StringUtils.hasText(after)) yield null; // 날짜 정렬은 after가 반드시 있어야함!!
-                    LocalDateTime afterDate = LocalDateTime.parse(after);
+                    LocalDateTime afterDate;
+                    try {
+                        afterDate = ZonedDateTime.parse(after).toLocalDateTime();
+                    } catch (Exception e) {
+                        afterDate = LocalDateTime.parse(after);
+                    }
                     yield isAsc ?
                             article.publishDate.gt(afterDate).or(article.publishDate.eq(afterDate).and(article.id.gt(cursorId))) :
                             article.publishDate.lt(afterDate).or(article.publishDate.eq(afterDate).and(article.id.lt(cursorId)));

@@ -18,6 +18,7 @@ import java.util.UUID;
 
 import static com.lunazkoe.newsaggregator.global.filter.MDCLoggingFilter.*;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/articles")
 @RequiredArgsConstructor
@@ -64,6 +65,7 @@ public class ArticleController {
             @ModelAttribute ArticleSearchCondition condition,
             @RequestHeader(HEADER_USER_ID) UUID requestUserId
     ) {
+        log.info("articleCondition={}", condition);
         CursorPageResponse<ArticleDto> response = articleService.searchArticles(condition, requestUserId);
         return response;
     }

@@ -53,6 +53,7 @@ public class InterestRepositoryImpl implements InterestRepositoryCustom {
             };
         }
 
+        // TODO 최적화 이걸 꼭 세야할까?
         long totalElements = Optional.ofNullable(queryFactory
                 .select(interest.count())
                 .from(interest)
