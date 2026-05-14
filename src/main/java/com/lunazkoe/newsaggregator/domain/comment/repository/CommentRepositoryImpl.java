@@ -2,7 +2,6 @@ package com.lunazkoe.newsaggregator.domain.comment.repository;
 
 import com.lunazkoe.newsaggregator.domain.comment.dto.request.SearchCommentCondition;
 import com.lunazkoe.newsaggregator.domain.comment.entity.Comment;
-import com.lunazkoe.newsaggregator.domain.comment.entity.QComment;
 import com.lunazkoe.newsaggregator.global.common.dto.CursorPageResponse;
 import com.querydsl.core.types.Order;
 import com.querydsl.core.types.OrderSpecifier;
@@ -18,8 +17,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import static com.lunazkoe.newsaggregator.domain.article.entity.QArticle.article;
-import static com.lunazkoe.newsaggregator.domain.comment.entity.QComment.*;
+import static com.lunazkoe.newsaggregator.domain.comment.entity.QComment.comment;
 
 @RequiredArgsConstructor
 public class CommentRepositoryImpl implements CommentRepositoryCustom{

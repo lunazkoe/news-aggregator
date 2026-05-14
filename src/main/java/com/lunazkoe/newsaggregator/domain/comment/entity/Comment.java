@@ -1,5 +1,7 @@
 package com.lunazkoe.newsaggregator.domain.comment.entity;
 
+import com.lunazkoe.newsaggregator.domain.article.entity.Article;
+import com.lunazkoe.newsaggregator.domain.user.entity.User;
 import com.lunazkoe.newsaggregator.global.common.entity.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -22,11 +24,13 @@ public class Comment extends BaseTimeEntity {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(name = "article_id", nullable = false)
-    private UUID articleId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "article_id", nullable = false)
+    private Article article;
 
-    @Column(name = "user_id", nullable = false)
-    private UUID userId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
     @Column(nullable = false, length = 500)
     private String content;
@@ -41,9 +45,9 @@ public class Comment extends BaseTimeEntity {
     private LocalDateTime deletedAt;
 
     @Builder
-    public Comment(UUID articleId, UUID userId, String content) {
-        this.articleId = articleId;
-        this.userId = userId;
+    public Comment(Article article, User user, String content) {
+        this.article = article;
+        this.user = user;
         this.content = content;
     }
 
@@ -51,6 +55,10 @@ public class Comment extends BaseTimeEntity {
         this.content = content;
     }
 
+    public void softDelete() {
+        this.isDeleted = true;
+        this.deletedAt = LocalDateTime.now();
+    }
     public void increaseLikeCount() {
         if (this.likeCount < Integer.MAX_VALUE) {
             this.likeCount++;
@@ -63,8 +71,4 @@ public class Comment extends BaseTimeEntity {
         }
     }
 
-    public void softDelete() {
-        this.isDeleted = true;
-        this.deletedAt = LocalDateTime.now();
-    }
 }

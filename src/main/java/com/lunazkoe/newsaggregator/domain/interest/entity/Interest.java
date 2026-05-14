@@ -52,8 +52,8 @@ public class Interest extends BaseTimeEntity {
 
     public void updateKeywords(List<String> keywords) {
         this.keywords = keywords; // AI가 이것보다는
-        this.keywords.clear();
-        this.keywords.addAll(keywords); // 가 낫다고 하네요
+//        this.keywords.clear();
+//        this.keywords.addAll(keywords); // 가 낫다고 하네요
     }
 
     public void increaseSubscriberCount() {

@@ -2,6 +2,7 @@ package com.lunazkoe.newsaggregator.domain.article.service;
 
 import com.lunazkoe.newsaggregator.domain.article.dto.request.ArticleSearchCondition;
 import com.lunazkoe.newsaggregator.domain.article.dto.response.ArticleDto;
+import com.lunazkoe.newsaggregator.domain.article.dto.response.ArticleViewDto;
 import com.lunazkoe.newsaggregator.domain.article.entity.Article;
 import com.lunazkoe.newsaggregator.domain.article.entity.ArticleView;
 import com.lunazkoe.newsaggregator.domain.article.exception.ArticleErrorCode;
@@ -30,31 +31,48 @@ public class ArticleService {
     private final ArticleViewRepository articleViewRepository;
     private final UserRepository userRepository;
 
-    // 동시성은 현재 고려하지 않기
     @Transactional
+    public ArticleViewDto recordArticleView(UUID articleId, UUID userId) {
+        log.info("기사 조회 요청 처리 시작 - articleId: {}, userId: {}", articleId, userId);
+
+        Article foundArticle = articleRepository.findById(articleId)
+                .orElseThrow(() -> new ArticleException(ArticleErrorCode.ARTICLE_NOT_FOUND, Map.of("id", articleId)));
+
+        Optional<ArticleView> existingView = articleViewRepository.findByArticleIdAndUserId(articleId, userId);
+
+        // 1-1. 이미 조회한 이력이 있다면, 기존 정보를 그대로 반환 (멱등성 보장)
+        if (existingView.isPresent()) {
+            log.info("이미 조회한 기사입니다. 기존 이력을 반환합니다. - articleId: {}, userId: {}", articleId, userId);
+            return ArticleViewDto.from(existingView.get());
+        }
+
+        User foundUser = userRepository.findById(userId)
+                .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND, Map.of("id", userId)));
+
+        ArticleView newView = ArticleView.builder()
+                .article(foundArticle)
+                .user(foundUser)
+                .build();
+
+        articleViewRepository.save(newView);
+        foundArticle.increaseViewCount();
+
+        log.info("기사 조회 기록 완료 - viewId: {}", newView.getId());
+        return ArticleViewDto.from(newView);
+    }
+
+    // 동시성은 현재 고려하지 않기
+    @Transactional(readOnly = true)
     public ArticleDto getArticle(UUID articleId, UUID userId) {
         log.info("Fetching article details - Article ID: {}, User ID: {}", articleId, userId);
 
         Article foundArticle = foundArticle(articleId);
 
-        User foundUser = foundUser(userId);
-
         boolean isAlreadyViewed = articleViewRepository.existsByArticleIdAndUserId(articleId, userId);
 
-        if (!isAlreadyViewed) {
-            // 처음 조회하는 경우 조회수 증가 및 이력 저장
-            foundArticle.increaseViewCount();
-            articleViewRepository.save(
-                    ArticleView.builder()
-                            .article(foundArticle)
-                            .user(foundUser)
-                            .build()
-            );
-            log.info("Increased view count for Article ID: {}", articleId);
-        }
-
         // 조회를 시도 했으므로 본인 조회 여부는 true로 반환
-        return ArticleDto.from(foundArticle, true);
+        // - 이걸 굳이 왜 조회해야할까? 어차피 자기가 조회를 했으니깐 결국 true이긴한데?
+        return ArticleDto.from(foundArticle, isAlreadyViewed);
     }
 
     @Transactional

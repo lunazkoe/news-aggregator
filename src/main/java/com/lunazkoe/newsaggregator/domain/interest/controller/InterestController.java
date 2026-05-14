@@ -1,11 +1,13 @@
 package com.lunazkoe.newsaggregator.domain.interest.controller;
 
 import com.lunazkoe.newsaggregator.domain.interest.dto.request.InterestSearchCondition;
+import com.lunazkoe.newsaggregator.domain.interest.dto.request.SubscriptionDto;
 import com.lunazkoe.newsaggregator.domain.interest.service.InterestService;
 import com.lunazkoe.newsaggregator.domain.interest.dto.request.InterestRegisterRequest;
 import com.lunazkoe.newsaggregator.domain.interest.dto.request.InterestUpdateRequest;
 import com.lunazkoe.newsaggregator.domain.interest.dto.response.InterestDto;
 import com.lunazkoe.newsaggregator.global.common.dto.CursorPageResponse;
+import com.lunazkoe.newsaggregator.global.filter.MDCLoggingFilter;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -67,5 +69,23 @@ public class InterestController {
     ) {
         log.info("Request to soft delete interest ID: {}", interestId);
         interestService.hardDelete(interestId);
+    }
+
+    @PostMapping("/{interestId}/subscriptions")
+    @ResponseStatus(HttpStatus.OK)
+    @Operation(summary = "관심사 구독", description = "관심사를 구독합니다.")
+    public SubscriptionDto subscription(@PathVariable UUID interestId, @RequestHeader(HEADER_USER_ID) UUID requestUserId) {
+        SubscriptionDto response = interestService.subscribe(interestId, requestUserId);
+        return response;
+    }
+
+    @DeleteMapping("/{interestId}/subscriptions")
+    @ResponseStatus(HttpStatus.OK)
+    @Operation(summary = "관심사 구독 취소", description = "관심사를 구독 취소합니다.")
+    public void cancelSubscription(
+            @PathVariable UUID interestId,
+            @RequestHeader(HEADER_USER_ID) UUID requestUserId
+    ) {
+        interestService.cancelSubscription(interestId, requestUserId);
     }
 }

@@ -15,12 +15,12 @@ public record CommentDto(
         Boolean likedByMe,
         LocalDateTime createdAt
 ) {
-    public static CommentDto from(Comment comment, String userNickname, boolean likedByMe) {
+    public static CommentDto from(Comment comment, boolean likedByMe) {
         return new CommentDto(
                 comment.getId(),
-                comment.getArticleId(),
-                comment.getUserId(),
-                userNickname,
+                comment.getArticle().getId(),
+                comment.getUser().getId(),
+                comment.getUser().getNickname(),
                 comment.getContent(),
                 comment.getLikeCount(),
                 likedByMe,
