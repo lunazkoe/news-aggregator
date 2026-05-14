@@ -10,6 +10,7 @@
     import com.querydsl.jpa.JPAExpressions;
     import com.querydsl.jpa.impl.JPAQueryFactory;
     import lombok.RequiredArgsConstructor;
+    import org.springframework.stereotype.Repository;
     import org.springframework.util.StringUtils;
 
     import java.time.LocalDateTime;
@@ -19,8 +20,7 @@
 
     import static com.lunazkoe.newsaggregator.domain.article.entity.QArticle.article;
 
-    // TODO: 관심사 interest와 artcle 간의 관게가 지금 없음
-
+    @Repository
     @RequiredArgsConstructor
     public class ArticleRepositoryImpl implements ArticleRepositoryCustom {
 
