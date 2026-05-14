@@ -10,6 +10,7 @@ import com.querydsl.core.types.dsl.StringTemplate;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Repository;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
@@ -18,6 +19,7 @@ import java.util.UUID;
 
 import static com.lunazkoe.newsaggregator.domain.interest.entity.QInterest.interest;
 
+@Repository
 @RequiredArgsConstructor
 public class InterestRepositoryImpl implements InterestRepositoryCustom {
 
