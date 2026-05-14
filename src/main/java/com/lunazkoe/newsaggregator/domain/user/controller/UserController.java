@@ -28,49 +28,54 @@ public class UserController {
 
     private final UserService userService;
 
+    @Operation(summary = "회원가입", description = "새로운 사용자를 등록합니다.")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "회원가입", description = "새로운 사용자를 등록합니다.")
     public UserDto register(@Valid @RequestBody UserRegisterRequest request) {
         log.info("Received register request for email: {}", request.email());
         UserDto response = userService.register(request);
         return response;
     }
 
+    @Operation(summary = "로그인", description = "사용자 로그인을 처리합니다.")
     @PostMapping("/login")
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "로그인", description = "사용자 로그인을 처리합니다.")
     public UserDto login(@Valid @RequestBody UserLoginRequest request) {
-        log.info("Received login request for emai: {}", request.email());
+        log.info("Received login request for email: {}", request.email());
         UserDto response = userService.login(request);
         return response;
     }
 
+    @Operation(summary = "사용자 논리 삭제", description = "사용자를 논리적으로 삭제합니다.")
     @DeleteMapping("/{userId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @Operation(summary = "사용자 논리 삭제", description = "사용자를 논리적으로 삭제합니다.")
-    public void softDeleteUser(@Parameter(description = "사용자 ID") @PathVariable("userId") UUID userId, @RequestHeader(HEADER_USER_ID) UUID requestId) {
+    public void softDeleteUser(
+            @PathVariable UUID userId,
+            @RequestHeader(HEADER_USER_ID) UUID requestId) {
         log.info("Received soft delete request for userId: {}", userId);
         userService.softDelete(userId, requestId);
     }
 
+    @Operation(summary = "사용자 정보 수정", description = "사용자의 닉네임을 수정합니다.")
     @PatchMapping("/{userId}")
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "사용자 정보 수정", description = "사용자의 닉네임을 수정합니다.")
     public UserDto updateUserNickName(
             @Parameter(description = "사용자 ID") @PathVariable("userId") UUID userId,
-            @Valid @RequestBody UserUpdateRequest request,
-            @RequestHeader(HEADER_USER_ID) UUID requestId
+            @Valid @RequestBody UserUpdateRequest request
+//            @RequestHeader(HEADER_USER_ID) UUID requestId
     ) {
         log.info("Received update request for userId: {}", userId);
-        UserDto response = userService.updateNickName(userId, request, requestId);
+        UserDto response = userService.updateNickName(userId, request);
         return response;
     }
 
+    @Operation(summary = "사용자 물리 삭제", description = "사용자를 물리적으로 삭제합니다.")
     @DeleteMapping("/{userId}/hard")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @Operation(summary = "사용자 물리 삭제", description = "사용자를 물리적으로 삭제합니다.")
-    public void hardDeleteUser(@Parameter(description = "사용자 ID") @PathVariable("userId") UUID userId, @RequestHeader(HEADER_USER_ID) UUID requestId) {
+    public void hardDeleteUser(
+            @PathVariable UUID userId,
+            @RequestHeader(HEADER_USER_ID) UUID requestId
+    ) {
         log.info("Received hard delete request for userId: {}", userId);
         userService.hardDelete(userId, requestId);
     }

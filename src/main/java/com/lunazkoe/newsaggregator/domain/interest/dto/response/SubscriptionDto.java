@@ -1,4 +1,4 @@
-package com.lunazkoe.newsaggregator.domain.interest.dto.request;
+package com.lunazkoe.newsaggregator.domain.interest.dto.response;
 
 import com.lunazkoe.newsaggregator.domain.interest.entity.Subscription;
 

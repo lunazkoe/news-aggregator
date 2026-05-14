@@ -3,6 +3,7 @@ package com.lunazkoe.newsaggregator.domain.article.repository;
 import com.lunazkoe.newsaggregator.domain.article.entity.ArticleView;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
@@ -16,5 +17,5 @@ public interface ArticleViewRepository extends JpaRepository<ArticleView, UUID> 
     Optional<ArticleView> findByArticleIdAndUserId(UUID articleId, UUID userId);
 
     @Query("SELECT av.article.id FROM ArticleView av WHERE av.user.id = :userId AND av.article.id IN :articleIds")
-    Set<UUID> findViewedArticleIds(UUID requestUserId, List<UUID> articleIds);
+    Set<UUID> findViewedArticleIds(@Param("userId") UUID requestUserId, @Param("articleIds") List<UUID> articleIds);
 }

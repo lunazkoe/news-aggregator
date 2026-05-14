@@ -1,7 +1,6 @@
 package com.lunazkoe.newsaggregator.domain.interest.entity;
 
 import com.lunazkoe.newsaggregator.domain.user.entity.User;
-import com.lunazkoe.newsaggregator.global.common.entity.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -14,8 +13,13 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "subscriptions", indexes = {
-        @Index(name = "idx_subscription_user_interest", columnList = "user_id, interest_id", unique = true)
+@Table(name = "subscriptions",
+        indexes = {
+            @Index(
+                    name = "idx_subscription_user_interest",
+                    columnList = "user_id, interest_id",
+                    unique = true
+            )
 })
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)

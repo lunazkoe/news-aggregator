@@ -31,6 +31,9 @@ public class ArticleService {
     private final ArticleViewRepository articleViewRepository;
     private final UserRepository userRepository;
 
+    /**
+     * 기사 뷰 등록
+     */
     @Transactional
     public ArticleViewDto recordArticleView(UUID articleId, UUID userId) {
         log.info("기사 조회 요청 처리 시작 - articleId: {}, userId: {}", articleId, userId);
@@ -40,7 +43,7 @@ public class ArticleService {
 
         Optional<ArticleView> existingView = articleViewRepository.findByArticleIdAndUserId(articleId, userId);
 
-        // 1-1. 이미 조회한 이력이 있다면, 기존 정보를 그대로 반환 (멱등성 보장)
+        // 이미 조회한 이력이 있다면, 기존 정보를 그대로 반환 (멱등성 보장)
         if (existingView.isPresent()) {
             log.info("이미 조회한 기사입니다. 기존 이력을 반환합니다. - articleId: {}, userId: {}", articleId, userId);
             return ArticleViewDto.from(existingView.get());
@@ -49,56 +52,30 @@ public class ArticleService {
         User foundUser = userRepository.findById(userId)
                 .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND, Map.of("id", userId)));
 
+        // 기사 뷰 생성
         ArticleView newView = ArticleView.builder()
                 .article(foundArticle)
                 .user(foundUser)
                 .build();
 
         articleViewRepository.save(newView);
+
+        // 기사 뷰 증가
         foundArticle.increaseViewCount();
 
         log.info("기사 조회 기록 완료 - viewId: {}", newView.getId());
         return ArticleViewDto.from(newView);
     }
 
-    // 동시성은 현재 고려하지 않기
-    @Transactional(readOnly = true)
-    public ArticleDto getArticle(UUID articleId, UUID userId) {
-        log.info("Fetching article details - Article ID: {}, User ID: {}", articleId, userId);
-
-        Article foundArticle = foundArticle(articleId);
-
-        boolean isAlreadyViewed = articleViewRepository.existsByArticleIdAndUserId(articleId, userId);
-
-        // 조회를 시도 했으므로 본인 조회 여부는 true로 반환
-        // - 이걸 굳이 왜 조회해야할까? 어차피 자기가 조회를 했으니깐 결국 true이긴한데?
-        return ArticleDto.from(foundArticle, isAlreadyViewed);
-    }
-
-    @Transactional
-    public void softDeleteArticle(UUID articleId) {
-        log.info("Soft deleting article - Article ID: {}", articleId);
-
-        Article foundArticle = foundArticle(articleId);
-        foundArticle.softDelete();
-
-        log.info("Successfully soft deleted article - Article ID: {}", articleId);
-    }
-
-    @Transactional
-    public void hardDeleteArticle(UUID articleId) {
-        log.info("Hard deleting article - Article ID: {}", articleId);
-
-        Article foundArticle = foundArticle(articleId);
-        articleRepository.delete(foundArticle);
-
-        log.info("Successfully hard deleted article - Article ID: {}", articleId);
-    }
-
+    /**
+     * 뉴스 기사 목록 조회
+     */
     @Transactional(readOnly = true)
     public CursorPageResponse<ArticleDto> searchArticles(ArticleSearchCondition condition, UUID requestUserId) {
-        CursorPageResponse<Article> pageResult = articleRepository.searchArticles(condition);
-        List<Article> articles = pageResult.content();
+        log.info("Searching Articles with condition: {}", condition);
+
+        CursorPageResponse<Article> pageResponse = articleRepository.searchArticles(condition);
+        List<Article> articles = pageResponse.content();
 
         Set<UUID> viewedArticleIds;
         if (requestUserId != null && !articles.isEmpty()) {
@@ -111,28 +88,80 @@ public class ArticleService {
             viewedArticleIds = new HashSet<>();
         }
 
-        List<ArticleDto> dtos = articles.stream()
-                .map(article -> new ArticleDto(
-                        article.getId(),
-                        article.getSource(),
-                        article.getSourceUrl(),
-                        article.getTitle(),
-                        article.getPublishDate(),
-                        article.getSummary(),
-                        article.getCommentCount(),
-                        article.getViewCount(),
-                        viewedArticleIds.contains(article.getId())
-                ))
+        // TODO: N + 1 문제 해결?
+        // - 근데 일단 repository에 작성한 @Query가 문제가 있는지 파악해야할 듯
+        List<ArticleDto> dtoList = articles.stream()
+                .map(article -> ArticleDto.from(
+                        article, viewedArticleIds.contains(article.getId())))
                 .toList();
 
         return new CursorPageResponse<>(
-                dtos,
-                pageResult.nextCursor(),
-                pageResult.nextAfter(),
-                pageResult.size(),
-                pageResult.totalElements(),
-                pageResult.hasNext()
+                dtoList,
+                pageResponse.nextCursor(),
+                pageResponse.nextAfter(),
+                pageResponse.size(),
+                pageResponse.totalElements(),
+                pageResponse.hasNext()
         );
+    }
+
+    /**
+     * 뉴스 기사 단건 조회
+     */
+    // TODO: 동시성 고려 하기
+    @Transactional(readOnly = true)
+    public ArticleDto getArticle(UUID articleId, UUID userId) {
+        log.info("Fetching article details - Article ID: {}, User ID: {}", articleId, userId);
+
+        Article foundArticle = foundArticle(articleId);
+
+        boolean isAlreadyViewed = articleViewRepository.existsByArticleIdAndUserId(articleId, userId);
+
+        // TODO: 조회한다는 건 View를 했다는건데, 근데 View를 처리하는 다른 API가 있음
+        // - 만약 API Spec이 잘못된 거면 그때 수정하기
+        return ArticleDto.from(foundArticle, isAlreadyViewed);
+    }
+
+    /**
+     * 뉴스 기사 논리 삭제
+     */
+    @Transactional
+    public void softDeleteArticle(UUID articleId) {
+        log.info("Soft deleting article - Article ID: {}", articleId);
+
+        Article foundArticle = foundArticle(articleId);
+        foundArticle.softDelete();
+
+        // TODO: 일단 여기서는 삭제와 관련된 무언가를 진행하지 않음
+        // - 논리 삭제가 되면 조회가 안되기 때문에 뭘 할 수가 없음 (위험이 없음)
+
+        log.info("Successfully soft deleted article - Article ID: {}", articleId);
+    }
+
+    /**
+     * 출처 목록 조회
+     */
+    // TODO: 출처 목록 조회는 그냥 컨트롤러 단에서 바로 반환하도록 구현
+    // - 나중에 문제 있을시 수정
+
+    /**
+     * 뉴스 복구
+     */
+    // TODO: 뉴스 복구
+
+    /**
+     * 뉴스 기사 물리 삭제
+     */
+    // TODO: 물리 삭제 연관 관계에 대한 삭제 로직이 사실상 없는 것 이제 슬슬 해야겠지?
+    // - 삭제 시 발생할 수 있는 문제들 파악 후 진행
+    @Transactional
+    public void hardDeleteArticle(UUID articleId) {
+        log.info("Hard deleting article - Article ID: {}", articleId);
+
+        Article foundArticle = foundArticle(articleId);
+        articleRepository.delete(foundArticle);
+
+        log.info("Successfully hard deleted article - Article ID: {}", articleId);
     }
 
     private  User foundUser(UUID userId) {

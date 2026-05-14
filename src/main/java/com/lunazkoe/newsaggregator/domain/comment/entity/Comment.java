@@ -59,6 +59,7 @@ public class Comment extends BaseTimeEntity {
         this.isDeleted = true;
         this.deletedAt = LocalDateTime.now();
     }
+
     public void increaseLikeCount() {
         if (this.likeCount < Integer.MAX_VALUE) {
             this.likeCount++;
@@ -70,5 +71,4 @@ public class Comment extends BaseTimeEntity {
             this.likeCount--;
         }
     }
-
 }

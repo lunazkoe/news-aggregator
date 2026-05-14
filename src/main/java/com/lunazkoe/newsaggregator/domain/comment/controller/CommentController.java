@@ -2,10 +2,11 @@ package com.lunazkoe.newsaggregator.domain.comment.controller;
 
 import com.lunazkoe.newsaggregator.domain.comment.dto.request.CommentRegisterRequest;
 import com.lunazkoe.newsaggregator.domain.comment.dto.request.CommentUpdateRequest;
+import com.lunazkoe.newsaggregator.domain.comment.dto.request.SearchCommentCondition;
 import com.lunazkoe.newsaggregator.domain.comment.dto.response.CommentDto;
 import com.lunazkoe.newsaggregator.domain.comment.dto.response.CommentLikeDto;
 import com.lunazkoe.newsaggregator.domain.comment.service.CommentService;
-import com.lunazkoe.newsaggregator.global.filter.MDCLoggingFilter;
+import com.lunazkoe.newsaggregator.global.common.dto.CursorPageResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -15,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
-import static com.lunazkoe.newsaggregator.global.filter.MDCLoggingFilter.*;
+import static com.lunazkoe.newsaggregator.global.filter.MDCLoggingFilter.HEADER_USER_ID;
 
 @Slf4j
 @RestController
@@ -25,54 +26,29 @@ public class CommentController {
 
     private final CommentService commentService;
 
+    @Operation(summary = "댓글 목록 조회", description = "조건에 맞는 댓글 목록을 조회합니다.")
+    @GetMapping()
+    @ResponseStatus(HttpStatus.OK)
+    public CursorPageResponse<CommentDto> searchComments(
+            @Valid @ModelAttribute SearchCommentCondition condition,
+            @RequestHeader(HEADER_USER_ID) UUID requestUserId
+    ) {
+        CursorPageResponse<CommentDto> response = commentService.searchComments(condition, requestUserId);
+        return response;
+    }
+
+    @Operation(summary = "댓글 등록", description = "새로운 댓글을 등록합니다.")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "댓글 등록", description = "새로운 댓글을 등록합니다.")
     public CommentDto commentRegister(@Valid @RequestBody CommentRegisterRequest request) {
         log.info("Request to register comment for article ID: {} by user ID: {}", request.articleId(), request.userId());
         CommentDto response = commentService.register(request);
         return response;
     }
 
-    @PatchMapping("/{commentId}")
-    @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "댓글 정보 수정", description = "댓글의 내용을 수정합니다.")
-    public CommentDto commentUpdate(
-            @PathVariable UUID commentId,
-            @Valid @RequestBody CommentUpdateRequest request
-    ) {
-        log.info("Request to update comment ID: {}", commentId);
-        CommentDto response = commentService.update(commentId, request);
-        return response;
-    }
-
-    @DeleteMapping("/{commentId}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    @Operation(summary = "댓글 논리 삭제", description = "댓글을 논리적으로 삭제합니다.")
-    public void softDeleteComment(
-            @PathVariable UUID commentId
-    ) {
-        log.info("Request to soft delete comment ID: {}", commentId);
-        commentService.softDelete(commentId);
-    }
-
-    @DeleteMapping("/{commentId}/hard")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    @Operation(summary = "댓글 물리 삭제", description = "댓글을 물리적으로 삭제합니다.")
-    public void hardDeleteComment(
-            @PathVariable UUID commentId
-    ) {
-        log.info("Request to hard delete comment ID: {}", commentId);
-        commentService.hardDelete(commentId);
-    }
-
-    // - 댓글 목록 조회
-
-
-    // - 댓글 좋아요
+    @Operation(summary = "관심사 댓글 좋아요", description = "댓글 좋아요를 등록합니다.")
     @PostMapping("/{commentId}/comment-likes")
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "관심사 댓글 좋아요", description = "댓글 좋아요를 등록합니다.")
     public CommentLikeDto likeComment(
             @PathVariable UUID commentId,
             @RequestHeader(HEADER_USER_ID) UUID userId
@@ -81,14 +57,46 @@ public class CommentController {
         return response;
     }
 
-    // - 댓글 좋아요 취소
+    @Operation(summary = "댓글 좋아요 취소", description = "댓글 좋아요를 취소합니다.")
     @DeleteMapping("/{commentId}/comment-likes")
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "댓글 좋아요 취소", description = "댓글 좋아요를 취소합니다.")
     public void cancelComment(
             @PathVariable UUID commentId,
             @RequestHeader(HEADER_USER_ID) UUID userId
     ) {
         commentService.cancelLikeComment(commentId, userId);
+    }
+
+    @Operation(summary = "댓글 논리 삭제", description = "댓글을 논리적으로 삭제합니다.")
+    @DeleteMapping("/{commentId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void softDeleteComment(
+            @PathVariable UUID commentId
+    ) {
+        log.info("Request to soft delete comment ID: {}", commentId);
+        commentService.softDelete(commentId);
+    }
+
+    @Operation(summary = "댓글 정보 수정", description = "댓글의 내용을 수정합니다.")
+    @PatchMapping("/{commentId}")
+    @ResponseStatus(HttpStatus.OK)
+    public CommentDto commentUpdate(
+            @PathVariable UUID commentId,
+            @Valid @RequestBody CommentUpdateRequest request,
+            @RequestHeader(HEADER_USER_ID) UUID requestUserId
+    ) {
+        log.info("Request to update comment ID: {}", commentId);
+        CommentDto response = commentService.update(commentId, request, requestUserId);
+        return response;
+    }
+
+    @Operation(summary = "댓글 물리 삭제", description = "댓글을 물리적으로 삭제합니다.")
+    @DeleteMapping("/{commentId}/hard")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void hardDeleteComment(
+            @PathVariable UUID commentId
+    ) {
+        log.info("Request to hard delete comment ID: {}", commentId);
+        commentService.hardDelete(commentId);
     }
 }

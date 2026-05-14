@@ -13,8 +13,13 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "comment_likes", indexes = {
-        @Index(name = "idx_comment_like_comment_user", columnList = "comment_id, user_id", unique = true)
+@Table(name = "comment_likes",
+        indexes = {
+            @Index(
+                    name = "idx_comment_like_comment_user",
+                    columnList = "comment_id, user_id",
+                    unique = true
+            )
 })
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -25,7 +30,6 @@ public class CommentLike {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    // Comment가 User를 들고 잇게 되는데?
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "comment_id", nullable = false)
     private Comment comment;

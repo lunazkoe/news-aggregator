@@ -61,7 +61,7 @@ public class CommentRepositoryImpl implements CommentRepositoryCustom{
                 .select(comment.count())
                 .from(comment)
                 .where(
-                        comment.articleId.eq(condition.articleId()),
+                        comment.article.id.eq(condition.articleId()),
                         comment.isDeleted.eq(false)
                 )
                 .fetchOne()
@@ -81,7 +81,7 @@ public class CommentRepositoryImpl implements CommentRepositoryCustom{
         if (articleId == null) {
             return null;
         }
-        return comment.articleId.eq(articleId);
+        return comment.article.id.eq(articleId);
     }
 
     private BooleanExpression isNotDeleted() {

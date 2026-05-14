@@ -62,7 +62,6 @@ public class Article extends BaseTimeEntity {
         this.isDeleted = true;
     }
 
-    // 비즈니스 로직 역정규화 필드 업데이트
     public void increaseViewCount() {
         if (this.viewCount < Integer.MAX_VALUE) {
             this.viewCount++;

@@ -13,12 +13,21 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(
-        name = "article_views",
-        uniqueConstraints = {
-                @UniqueConstraint(
-                        name = "uk_article_view",
-                        columnNames = {"article_id", "user_id"}
+//@Table(
+//        name = "article_views",
+//        uniqueConstraints = {
+//                @UniqueConstraint(
+//                        name = "uk_article_view",
+//                        columnNames = {"article_id", "user_id"} // 많이 조회하는게 앞에 오면 성능이 좋아진다고 함
+//                )
+//        }
+//)
+@Table(name = "article_views",
+        indexes = {
+                @Index(
+                        name = "idx_article_view_article_user",
+                        columnList = "article_id, user_id",
+                        unique = true
                 )
         }
 )

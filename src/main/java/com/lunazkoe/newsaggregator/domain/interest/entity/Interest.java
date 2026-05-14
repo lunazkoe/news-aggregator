@@ -20,7 +20,6 @@ import java.util.UUID;
 @Table(name = "interests")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @SQLRestriction("is_deleted = false")
-// - 이거 오타낼 수도 있으니깐 나중에 커스텀 어노테이션으로 만들어보자
 public class Interest extends BaseTimeEntity {
 
     @Id
@@ -31,13 +30,13 @@ public class Interest extends BaseTimeEntity {
     private String name;
 
     @JdbcTypeCode(SqlTypes.ARRAY)
-    // - Hibernate 6 기능: PostgreSQL의 배열 타입(varchar[])와 Java의 List를 쉽게 매핑
     @Column(columnDefinition = "varchar[]")
     private List<String> keywords = new ArrayList<>();
 
     @Column(name = "subscriber_count", nullable = false)
     private Integer subscriberCount = 0;
 
+    // 이거 두 개는 API 스펙상 사용되진 않음
     @Column(name = "is_deleted", nullable = false)
     private Boolean isDeleted = false;
 
