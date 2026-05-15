@@ -18,4 +18,6 @@ public interface ArticleViewRepository extends JpaRepository<ArticleView, UUID> 
 
     @Query("SELECT av.article.id FROM ArticleView av WHERE av.user.id = :userId AND av.article.id IN :articleIds")
     Set<UUID> findViewedArticleIds(@Param("userId") UUID requestUserId, @Param("articleIds") List<UUID> articleIds);
+
+    List<ArticleView> findTop10ByUserIdOrderByCreatedAtDesc(UUID userId);
 }
