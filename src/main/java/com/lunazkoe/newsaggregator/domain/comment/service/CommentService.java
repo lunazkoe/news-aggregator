@@ -20,8 +20,11 @@ import com.lunazkoe.newsaggregator.domain.user.exception.UserErrorCode;
 import com.lunazkoe.newsaggregator.domain.user.exception.UserException;
 import com.lunazkoe.newsaggregator.domain.user.repository.UserRepository;
 import com.lunazkoe.newsaggregator.global.common.dto.CursorPageResponse;
+import com.lunazkoe.newsaggregator.global.common.event.CommentCreatedEvent;
+import com.lunazkoe.newsaggregator.global.common.event.CommentLikedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,6 +41,7 @@ public class CommentService {
     private final UserRepository userRepository;
     private final ArticleRepository articleRepository;
     private final CommentLikeRepository commentLikeRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * 댓글 목록 조회
@@ -90,6 +94,18 @@ public class CommentService {
         // 기사 댓글 수 증가
         foundArticle.increaseCommentCount();
 
+        // 댓글 등록 시 댓글 등록 이벤트 발행
+        eventPublisher.publishEvent(new CommentCreatedEvent(
+                foundUser.getId(),
+                newComment.getId(),
+                foundArticle.getId(),
+                foundArticle.getTitle(),
+                foundUser.getNickname(),
+                newComment.getContent(),
+                newComment.getLikeCount(),
+                newComment.getCreatedAt()
+        ));
+
         return CommentDto.from(savedComment, false);
         // - 등록 직후이므로 좋아요는 누르지 않은 상태
         // - 좋아요 누르는 건 따로 처리
@@ -102,7 +118,7 @@ public class CommentService {
     public CommentLikeDto likeComment(UUID commentId, UUID userId) {
         log.info("댓글 좋아요 요청 처리 시작 - commentId: {}, userId: {}", commentId, userId);
 
-        Comment foundComment = commentRepository.findById(commentId)
+        Comment foundComment = commentRepository.findByIdWithArticleAndUser(commentId)
                 .orElseThrow(() -> new CommentException(CommentErrorCode.COMMENT_NOT_FOUND));
 
         User foundUser = userRepository.findById(userId)
@@ -124,6 +140,24 @@ public class CommentService {
         foundComment.increaseLikeCount();
 
         log.info("댓글 좋아요 완료 - likeId: {}", newCommentLike.getId());
+
+        // 쿼리 발생!!
+        // TODO: 최적화: 일단 해결은 한 듯?
+        Article article = foundComment.getArticle();
+        eventPublisher.publishEvent(new CommentLikedEvent(
+                foundUser.getId(),
+                newCommentLike.getId(),
+                foundComment.getId(),
+                foundComment.getArticle().getId(),
+                foundComment.getArticle().getTitle(),
+                foundComment.getUser().getId(),
+                foundComment.getUser().getNickname(),
+                foundComment.getContent(),
+                foundComment.getLikeCount(),
+                newCommentLike.getCreatedAt(),
+                foundComment.getCreatedAt()
+        ));
+
         return CommentLikeDto.from(newCommentLike);
         // - 완성된 객체기 때문에 추가 쿼리가 발생하는 그런 문제는 없을 것으로 예상
     }

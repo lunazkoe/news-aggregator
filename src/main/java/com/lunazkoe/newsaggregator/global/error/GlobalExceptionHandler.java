@@ -2,12 +2,14 @@ package com.lunazkoe.newsaggregator.global.error;
 
 import com.lunazkoe.newsaggregator.global.error.exception.MonewException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.stream.Collectors;
 
@@ -44,6 +46,15 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity.status(GlobalErrorCode.INTERNAL_SERVER_ERROR.getHttpStatus())
                 .body(ErrorResponse.of(GlobalErrorCode.INTERNAL_SERVER_ERROR, e));
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    protected ResponseEntity<ErrorResponse> handleNoResourceFoundException(NoResourceFoundException e) {
+        // ERROR 대신 WARN 레벨로 짧게 로깅 (스택 트레이스 생략)
+        log.warn("[NoResourceFound] URI: {}", e.getResourcePath());
+
+        return ResponseEntity.status((HttpStatus.NOT_FOUND))
+                .body(ErrorResponse.of(GlobalErrorCode.NOT_FOUND, e));
     }
 }
 

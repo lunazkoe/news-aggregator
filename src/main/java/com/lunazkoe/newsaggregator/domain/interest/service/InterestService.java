@@ -16,8 +16,10 @@ import com.lunazkoe.newsaggregator.domain.user.exception.UserErrorCode;
 import com.lunazkoe.newsaggregator.domain.user.exception.UserException;
 import com.lunazkoe.newsaggregator.domain.user.repository.UserRepository;
 import com.lunazkoe.newsaggregator.global.common.dto.CursorPageResponse;
+import com.lunazkoe.newsaggregator.global.common.event.SubscriptionEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,6 +35,7 @@ public class InterestService {
     private final InterestRepository interestRepository;
     private final UserRepository userRepository;
     private final SubscriptionRepository subscriptionRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * 관심사 목록 조회
@@ -125,6 +128,18 @@ public class InterestService {
         // - Subscription은 User / Interest를 지연로딩으로 들고 있음
         // - 바로 위에서 savedSubscritpon을 만들 때 interest를 끼워 넣어서 그 객체를 넣는 것이기 때문에
         // - 추가 쿼리가 발생하지 않음
+
+        // 관심사 구독 시 이벤트 발행
+        eventPublisher.publishEvent(new SubscriptionEvent(
+                foundUser.getId(),
+                newSubscription.getId(),
+                foundInterest.getId(),
+                foundInterest.getName(),
+                foundInterest.getKeywords(),
+                foundInterest.getSubscriberCount(),
+                newSubscription.getCreatedAt()
+        ));
+
         return SubscriptionDto.from(savedSubscription);
     }
 

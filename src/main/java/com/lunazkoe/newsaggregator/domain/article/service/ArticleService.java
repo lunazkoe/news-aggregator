@@ -14,9 +14,11 @@ import com.lunazkoe.newsaggregator.domain.user.exception.UserErrorCode;
 import com.lunazkoe.newsaggregator.domain.user.exception.UserException;
 import com.lunazkoe.newsaggregator.domain.user.repository.UserRepository;
 import com.lunazkoe.newsaggregator.global.common.dto.CursorPageResponse;
+import com.lunazkoe.newsaggregator.global.common.event.ArticleViewedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +32,7 @@ public class ArticleService {
     private final ArticleRepository articleRepository;
     private final ArticleViewRepository articleViewRepository;
     private final UserRepository userRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * 기사 뷰 등록
@@ -64,6 +67,21 @@ public class ArticleService {
         foundArticle.increaseViewCount();
 
         log.info("기사 조회 기록 완료 - viewId: {}", newView.getId());
+
+        eventPublisher.publishEvent(new ArticleViewedEvent(
+                userId,
+                newView.getId(),
+                foundArticle.getId(),
+                foundArticle.getSource(),
+                foundArticle.getSourceUrl(),
+                foundArticle.getTitle(),
+                foundArticle.getPublishDate(),
+                foundArticle.getSummary(),
+                foundArticle.getCommentCount(),
+                foundArticle.getViewCount(),
+                foundArticle.getCreatedAt()
+        ));
+
         return ArticleViewDto.from(newView);
     }
 

@@ -4,6 +4,7 @@ import com.lunazkoe.newsaggregator.domain.article.entity.Source;
 import jakarta.persistence.Id;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.ToString;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.mongodb.core.mapping.Document;
 
@@ -14,7 +15,8 @@ import java.util.UUID;
 
 @Getter
 @Builder
-@Document(collation = "user_activities")
+@Document(collection = "user_activities")
+@ToString
 public class UserActivity {
 
     @Id
@@ -51,6 +53,8 @@ public class UserActivity {
             UUID id,
             UUID articleId,
             String articleTitle,
+            UUID userId,          // 추가
+            String userNickname,  // 추가
             String content,
             int likeCount,
             LocalDateTime createdAt
@@ -70,6 +74,7 @@ public class UserActivity {
 
     public record ArticleViewHistory(
             UUID id,
+            UUID viewedBy,        // 기사를 조회한 사용자 ID
             UUID articleId,
             Source source,
             String sourceUrl,

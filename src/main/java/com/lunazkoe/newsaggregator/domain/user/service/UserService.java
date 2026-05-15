@@ -8,8 +8,10 @@ import com.lunazkoe.newsaggregator.domain.user.entity.User;
 import com.lunazkoe.newsaggregator.domain.user.exception.UserErrorCode;
 import com.lunazkoe.newsaggregator.domain.user.exception.UserException;
 import com.lunazkoe.newsaggregator.domain.user.repository.UserRepository;
+import com.lunazkoe.newsaggregator.global.common.event.UserRegisteredEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +28,7 @@ import java.util.UUID;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * 등록(회원가입)
@@ -47,6 +50,13 @@ public class UserService {
 
         User savedUser = userRepository.save(newUser);
         log.info("User registered successfully. UserId: {}", savedUser.getId());
+
+        // 회원가입이 끝나는 시점에 mongodb에 유저 활동 내역(빈 상태로) 발행
+        eventPublisher.publishEvent(new UserRegisteredEvent(
+                savedUser.getId(),
+                savedUser.getEmail(),
+                savedUser.getNickname()
+        ));
 
         return UserDto.from(savedUser);
     }
