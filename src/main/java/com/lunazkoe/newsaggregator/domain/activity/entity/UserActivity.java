@@ -2,9 +2,7 @@ package com.lunazkoe.newsaggregator.domain.activity.entity;
 
 import com.lunazkoe.newsaggregator.domain.article.entity.Source;
 import jakarta.persistence.Id;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.ToString;
+import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.mongodb.core.mapping.Document;
 
@@ -17,6 +15,8 @@ import java.util.UUID;
 @Builder
 @Document(collection = "user_activities")
 @ToString
+@NoArgsConstructor(access = AccessLevel.PROTECTED) // 프레임워크용 기본 생성자
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class UserActivity {
 
     @Id
@@ -40,6 +40,22 @@ public class UserActivity {
     @Builder.Default
     private List<ArticleViewHistory> articleViews = new ArrayList<>();
 
+    public List<SubscriptionHistory> getSubscriptions() {
+        return subscriptions != null ? subscriptions : new ArrayList<>();
+    }
+
+    public List<CommentHistory> getComments() {
+        return comments != null ? comments : new ArrayList<>();
+    }
+
+    public List<CommentLikeHistory> getCommentLikes() {
+        return commentLikes != null ? commentLikes : new ArrayList<>();
+    }
+
+    public List<ArticleViewHistory> getArticleViews() {
+        return articleViews != null ? articleViews : new ArrayList<>();
+    }
+
     public record SubscriptionHistory(
             UUID id,
             UUID interestId,
@@ -53,8 +69,8 @@ public class UserActivity {
             UUID id,
             UUID articleId,
             String articleTitle,
-            UUID userId,          // 추가
-            String userNickname,  // 추가
+            UUID userId,
+            String userNickname,
             String content,
             int likeCount,
             LocalDateTime createdAt

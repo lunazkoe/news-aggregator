@@ -48,17 +48,14 @@ public class UserActivityService {
      */
     public void addUserRegisteredEventActivity(UserRegisteredEvent event) {
         log.info("[MongoDB Init] 신규 유저 활동 내역 문서 생성 로직 시작. User ID: {}", event.userId());
-        UserActivity initialActivity = UserActivity.builder()
-                .id(event.userId())
-                .email(event.email())
-                .nickname(event.nickname())
-                .createdAt(LocalDateTime.now())
-//                .subscriptions(new ArrayList<>()) // @Builder.Default
-//                .comments(new ArrayList<>())
-//                .commentLikes(new ArrayList<>())
-//                .articleViews(new ArrayList<>())
-                .build();
-        userActivityRepository.save(initialActivity);
+        Query query = Query.query(Criteria.where("_id").is(event.userId()));
+
+        Update update = new Update()
+                .set("email", event.email())
+                .set("nickname", event.nickname())
+                .setOnInsert("createdAt", LocalDateTime.now());
+
+        mongoTemplate.upsert(query, update, UserActivity.class);
     }
 
     public void addSubscriptionActivity(SubscriptionEvent event) {
@@ -103,13 +100,11 @@ public class UserActivityService {
         upsertUserActivity(event.userId(), update);
     }
 
-
-
     private void upsertUserActivity(UUID userId, Update update) {
         Query query = Query.query(Criteria.where("_id").is(userId));
 
-        // 만약 문서가 없어서 새로 만들어야할 경우 초기 생성일자 세팅 - 회원가입 후 생성으로 일단 문제 없음을 확인?
-//        update.setOnInsert("createdAt", LocalDateTime.now());
+        // 만약 문서가 없어서 새로 만들어야 할 경우 (이벤트 순서가 뒤집힌 경우)
+        update.setOnInsert("createdAt", LocalDateTime.now());
 
         mongoTemplate.upsert(query, update, UserActivity.class);
     }
