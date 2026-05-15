@@ -17,7 +17,6 @@ import com.lunazkoe.newsaggregator.global.common.dto.CursorPageResponse;
 import com.lunazkoe.newsaggregator.global.common.event.ArticleViewedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.jspecify.annotations.NonNull;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -69,6 +68,7 @@ public class ArticleService {
         log.info("기사 조회 기록 완료 - viewId: {}", newView.getId());
 
         eventPublisher.publishEvent(new ArticleViewedEvent(
+                userId,
                 userId,
                 newView.getId(),
                 foundArticle.getId(),

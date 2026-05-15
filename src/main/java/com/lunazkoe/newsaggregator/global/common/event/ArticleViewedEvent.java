@@ -6,6 +6,7 @@ import java.util.UUID;
 
 public record ArticleViewedEvent(
         UUID userId, // 기사를 조회한 사용자 ID
+        UUID viewedBy,
         UUID articleViewId,
         UUID articleId,
         Source source,

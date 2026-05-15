@@ -60,20 +60,42 @@ public class UserActivityService {
 
     public void addSubscriptionActivity(SubscriptionEvent event) {
         log.info("MongoDB 구독 내역 업데이트 로직 실행 - userId: {}", event.userId());
+
+        // 1. History 객체로 명시적 매핑
+        UserActivity.SubscriptionHistory history = UserActivity.SubscriptionHistory.builder()
+                .id(event.subscriptionId()) // Event 클래스의 필드명에 맞게 호출
+                .interestId(event.interestId())
+                .interestName(event.interestName())
+                .interestKeywords(event.interestKeywords())
+                .interestSubscriberCount(event.interestSubscriberCount())
+                .createdAt(event.createdAt())
+                .build();
+
         Update update = new Update().push("subscriptions")
                 .atPosition(Update.Position.FIRST)  // 배열의 가장 앞에 추가 (최신순)
                 .slice(MAX_ACTIVITY_SIZE)           // 최대 10개까지만 유지하고 오래된 것은 자동 삭제
-                .each(event);// Event 레코드 객체 자체를 Document 내부 객체로 삽입
+                .each(history);// Event 레코드 객체 자체를 Document 내부 객체로 삽입
         upsertUserActivity(event.userId(), update);
     }
 
     public void addCommentActivity(CommentCreatedEvent event) {
         log.info("MongoDB 댓글 작성 내역 업데이트 로직 실행 - userId: {}", event.userId());
 
+        UserActivity.CommentHistory history = UserActivity.CommentHistory.builder()
+                .id(event.commentId())
+                .articleId(event.articleId())
+                .articleTitle(event.articleTitle())
+                .userId(event.userId())
+                .userNickname(event.userNickname())
+                .content(event.content())
+                .likeCount(event.likeCount())
+                .createdAt(event.createdAt())
+                .build();
+
         Update update = new Update().push("comments")
                 .atPosition(Update.Position.FIRST)
                 .slice(MAX_ACTIVITY_SIZE)
-                .each(event);
+                .each(history);
 
         upsertUserActivity(event.userId(), update);
     }
@@ -81,10 +103,23 @@ public class UserActivityService {
     public void addCommentLikeActivity(CommentLikedEvent event) {
         log.info("MongoDB 댓글 좋아요 내역 업데이트 로직 실행 - userId: {}", event.userId());
 
+        UserActivity.CommentLikeHistory history = UserActivity.CommentLikeHistory.builder()
+                .id(event.commentLikeId()) // Event 클래스의 PK
+                .commentId(event.commentId())
+                .articleId(event.articleId())
+                .articleTitle(event.articleTitle())
+                .commentUserId(event.commentUserId())
+                .commentUserNickname(event.commentUserNickname())
+                .commentContent(event.commentContent())
+                .commentLikeCount(event.commentLikeCount())
+                .commentCreatedAt(event.commentCreatedAt())
+                .createdAt(event.createdAt())
+                .build();
+
         Update update = new Update().push("commentLikes")
                 .atPosition(Update.Position.FIRST)
                 .slice(MAX_ACTIVITY_SIZE)
-                .each(event);
+                .each(history);
 
         upsertUserActivity(event.userId(), update);
     }
@@ -92,10 +127,24 @@ public class UserActivityService {
     public void addArticleViewActivity(ArticleViewedEvent event) {
         log.info("MongoDB 기사 조회 내역 업데이트 로직 실행 - userId: {}", event.userId());
 
+        UserActivity.ArticleViewHistory history = UserActivity.ArticleViewHistory.builder()
+                .id(event.articleViewId())
+                .viewedBy(event.viewedBy())
+                .articleId(event.articleId())
+                .source(event.source().name())
+                .sourceUrl(event.sourceUrl())
+                .articleTitle(event.articleTitle())
+                .articlePublishedDate(event.articlePublishedDate())
+                .articleSummary(event.articleSummary())
+                .articleCommentCount(event.articleCommentCount())
+                .articleViewCount(event.articleViewCount())
+                .createdAt(event.createdAt())
+                .build();
+
         Update update = new Update().push("articleViews")
                 .atPosition(Update.Position.FIRST)
                 .slice(MAX_ACTIVITY_SIZE)
-                .each(event);
+                .each(history);
 
         upsertUserActivity(event.userId(), update);
     }

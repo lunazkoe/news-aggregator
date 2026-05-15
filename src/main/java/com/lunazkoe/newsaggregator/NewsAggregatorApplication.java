@@ -2,7 +2,9 @@ package com.lunazkoe.newsaggregator;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.openfeign.EnableFeignClients;
 import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 @EnableAsync // 비동기 처리 활성화를 해주기 (안해도 되긴 하는데)
 // - @EventListener를 사용할 경우 이벤트를 발행하는 시점에 실행
@@ -12,6 +14,8 @@ import org.springframework.scheduling.annotation.EnableAsync;
 // - 비동기적으로 이벤트를 수신하려면 이벤트 리스너에 @Async를 지정하고 최상위에 @EnableAsync를 붙여줘야함
 // - @Async를 하면 기존 스레드와 분리되고 자연스럽게 트랜잭션도 분리됨
 @SpringBootApplication
+@EnableFeignClients
+@EnableScheduling
 public class NewsAggregatorApplication {
 
     public static void main(String[] args) {

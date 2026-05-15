@@ -56,6 +56,7 @@ public class UserActivity {
         return articleViews != null ? articleViews : new ArrayList<>();
     }
 
+    @Builder
     public record SubscriptionHistory(
             UUID id,
             UUID interestId,
@@ -65,6 +66,7 @@ public class UserActivity {
             LocalDateTime createdAt
     ) {}
 
+    @Builder
     public record CommentHistory(
             UUID id,
             UUID articleId,
@@ -76,6 +78,7 @@ public class UserActivity {
             LocalDateTime createdAt
     ) {}
 
+    @Builder
     public record CommentLikeHistory(
             UUID id,
             UUID commentId,
@@ -85,14 +88,16 @@ public class UserActivity {
             String commentUserNickname,
             String commentContent,
             int commentLikeCount,
+            LocalDateTime commentCreatedAt,
             LocalDateTime createdAt
     ) {}
 
+    @Builder
     public record ArticleViewHistory(
             UUID id,
             UUID viewedBy,        // 기사를 조회한 사용자 ID
             UUID articleId,
-            Source source,
+            String source,
             String sourceUrl,
             String articleTitle,
             LocalDateTime articlePublishedDate,
