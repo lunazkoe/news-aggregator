@@ -51,9 +51,7 @@
 
             if (hasNext) {
                 articles.remove(limit); // 실제 응답에서는 초과분(1개)을 제거
-            }
 
-            if (!articles.isEmpty()) {
                 Article lastArticle = articles.get(articles.size() - 1);
                 nextCursor = lastArticle.getId().toString();
                 nextAfter = switch (condition.orderBy() != null ? condition.orderBy() : "publishDate") {
@@ -164,16 +162,23 @@
 
                 // 기본값: publishDate 정렬
                 default -> {
-                    if (!StringUtils.hasText(after)) yield null; // 날짜 정렬은 after가 반드시 있어야함!!
-                    LocalDateTime afterDate;
-                    try {
-                        afterDate = ZonedDateTime.parse(after).toLocalDateTime();
-                    } catch (Exception e) {
-                        afterDate = LocalDateTime.parse(after);
+                    if (StringUtils.hasText(after)) {
+                        LocalDateTime afterDate;
+                        try {
+                            afterDate = ZonedDateTime.parse(after).toLocalDateTime();
+                        } catch (Exception e) {
+                            afterDate = LocalDateTime.parse(after);
+                        }
+                        yield isAsc ?
+                                article.publishDate.gt(afterDate).or(article.publishDate.eq(afterDate).and(article.id.gt(cursorId))) :
+                                article.publishDate.lt(afterDate).or(article.publishDate.eq(afterDate).and(article.id.lt(cursorId)));
+                    } else {
+                        // 프론트엔드가 after 파라미터를 빼먹고 보냈을 때의 강력한 Fallback 로직
+                        var subQuery = JPAExpressions.select(article.publishDate).from(article).where(article.id.eq(cursorId));
+                        yield isAsc ?
+                                article.publishDate.gt(subQuery).or(article.publishDate.eq(subQuery).and(article.id.gt(cursorId))) :
+                                article.publishDate.lt(subQuery).or(article.publishDate.eq(subQuery).and(article.id.lt(cursorId)));
                     }
-                    yield isAsc ?
-                            article.publishDate.gt(afterDate).or(article.publishDate.eq(afterDate).and(article.id.gt(cursorId))) :
-                            article.publishDate.lt(afterDate).or(article.publishDate.eq(afterDate).and(article.id.lt(cursorId)));
                 }
             };
         }
