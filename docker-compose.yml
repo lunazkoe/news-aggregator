@@ -1,10 +1,23 @@
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: news-aggregator
+    container_name: news-aggregator-postgres # 컨테이너 이름 겹치지 않게 명확히 수정
     ports:
       - "5432:5432"
     environment:
       - POSTGRES_USER=user
       - POSTGRES_PASSWORD=pass
       - POSTGRES_DB=news_aggregator_db
+
+  mongodb:
+    image: mongo:7.0
+    container_name: news-aggregator-mongo
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_DATABASE=monew # 초기 생성될 데이터베이스 이름
+    volumes:
+      - mongo_data:/data/db # 컨테이너가 내려가도 데이터가 유지되도록 볼륨 매핑
+
+volumes:
+  mongo_data:
