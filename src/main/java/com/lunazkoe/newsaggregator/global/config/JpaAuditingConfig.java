@@ -6,6 +6,6 @@ import org.springframework.data.mongodb.config.EnableMongoAuditing;
 
 @Configuration
 @EnableJpaAuditing
-@EnableMongoAuditing
+@EnableMongoAuditing // MongoDB Document의 @CreatedDate
 public class JpaAuditingConfig {
 }
