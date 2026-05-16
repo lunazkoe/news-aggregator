@@ -17,7 +17,7 @@ import java.util.UUID;
 @Order(Ordered.HIGHEST_PRECEDENCE) // 모든 필터 중 가장 먼저 실행
 public class MDCLoggingFilter extends OncePerRequestFilter {
 
-    private final String REQUEST_ID = "requestId";
+    private final static String REQUEST_ID = "requestId";
     private final String REQUEST_METHOD = "requestMethod";
     private final String REQUEST_URL = "requestUrl";
     private final String CLIENT_IP = "clientIp";

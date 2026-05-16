@@ -18,10 +18,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * TODO: 회원가입 / 로그인 시에만 email로 검색 => 인덱스를 걸지 말지 고민중
- */
-
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -71,6 +67,7 @@ public class UserService {
                 .orElseThrow(() -> new UserException(UserErrorCode.EMAIL_OR_PASSWORD_INVALID));
 
         // 비밀번호 일치 여부 확인
+        // TODO: PasswordEncoder로 암호화를 했을 경우 복호화를 해야함(진짜 복호화는 아님)
         if (!foundUser.getPassword().equals(request.password())) {
             throw new UserException(UserErrorCode.EMAIL_OR_PASSWORD_INVALID);
         }

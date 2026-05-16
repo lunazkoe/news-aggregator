@@ -5,7 +5,6 @@ import com.lunazkoe.newsaggregator.domain.user.dto.request.UserRegisterRequest;
 import com.lunazkoe.newsaggregator.domain.user.dto.request.UserUpdateRequest;
 import com.lunazkoe.newsaggregator.domain.user.dto.response.UserDto;
 import com.lunazkoe.newsaggregator.domain.user.service.UserService;
-import com.lunazkoe.newsaggregator.global.filter.MDCLoggingFilter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -17,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
-import static com.lunazkoe.newsaggregator.global.filter.MDCLoggingFilter.*;
+import static com.lunazkoe.newsaggregator.global.filter.MDCLoggingFilter.HEADER_USER_ID;
 
 @Slf4j
 @RestController
