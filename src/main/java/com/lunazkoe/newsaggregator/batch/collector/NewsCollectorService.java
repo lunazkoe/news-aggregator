@@ -14,8 +14,10 @@ import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.web.util.HtmlUtils;
 
 import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -149,16 +151,19 @@ public class NewsCollectorService {
 
     private String cleanHtmlTags(String text) {
         if (text == null) return "";
-        // 네이버 응답에 포함된 <b>, </b> 및 HTML 엔티티 제거
-        return text.replaceAll("<[^>]*>", "").replaceAll("&quot;", "\"").replaceAll("&amp;", "&");
+        // 정규식으로 HTML 태그(<b> 등) 제거
+        String noTagText = text.replaceAll("<[^>]*>", "");
+        // Spring HtmlUtils를 사용하여 모든 HTML 엔티티(&quot;, &amp;, &lt; 등)를 안전하게 디코딩
+        return HtmlUtils.htmlUnescape(noTagText);
     }
 
     private LocalDateTime parseNaverDate(String pubDateStr) {
         try {
-            return LocalDateTime.parse(pubDateStr, NAVER_DATE_FORMATTER);
+            // 타임존 정보를 포함하여 파싱한 뒤, 로컬 타임으로 변환
+            return ZonedDateTime.parse(pubDateStr, NAVER_DATE_FORMATTER).toLocalDateTime();
         } catch (Exception e) {
             log.warn("[날짜 파싱 실패] 원본 날짜: {}, 에러: {}", pubDateStr, e.getMessage());
-            return LocalDateTime.now(); // 파싱 실패 시 현재 시간으로 fallback
+            return LocalDateTime.now();
         }
     }
 }
