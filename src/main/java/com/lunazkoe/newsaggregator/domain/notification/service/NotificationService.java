@@ -8,7 +8,9 @@ import com.lunazkoe.newsaggregator.domain.notification.exception.NotificationErr
 import com.lunazkoe.newsaggregator.domain.notification.exception.NotificationException;
 import com.lunazkoe.newsaggregator.domain.notification.repository.NotificationRepository;
 import com.lunazkoe.newsaggregator.domain.user.entity.User;
+import com.lunazkoe.newsaggregator.domain.user.repository.UserRepository;
 import com.lunazkoe.newsaggregator.global.common.dto.CursorPageResponse;
+import com.lunazkoe.newsaggregator.global.common.event.NotificationCreateEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -16,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Slf4j
@@ -24,6 +27,7 @@ import java.util.UUID;
 public class NotificationService {
 
     private final NotificationRepository notificationRepository;
+    private final UserRepository userRepository;
 
     /**
      * 알림 목록 조회 (미확인)
@@ -79,14 +83,26 @@ public class NotificationService {
 
     // TODO: 내부용: 추후 Event Listener 등에서 호출됨
     @Transactional
-    public void createNotification(User user, String content, ResourceType type, UUID resourceId) {
+    public void createNotification(NotificationCreateEvent event) {
+        // 수신자 검증: 회원이 탈퇴했거나 없는 경우 즉시 알림 생성 무시
+        User receiver = userRepository.findById(event.receiverId())
+                .orElse(null);
+
+        if (receiver == null) {
+            log.warn("[Notification] 수신자를 찾을 수 없거나 탈퇴한 회원입니다. receiverId: {}", receiver.getId());
+            return;
+        }
+
+        // 알림 엔티티 생성
         Notification notification = Notification.builder()
-                .user(user)
-                .content(content)
-                .resourceType(type)
-                .resourceId(resourceId)
+                .user(receiver)
+                .content(event.content())
+                .resourceType(event.resourceType())
+                .resourceId(event.resourceId())
                 .build();
+
         notificationRepository.save(notification);
-        log.info("새로운 알림 생성 완료 - userId: {}, type: {}", user.getId(), type);
+        log.info("[Notification Created] 알림 저장 완료. notificationId: {}, receiverId: {}",
+                notification.getId(), receiver.getId());
     }
 }

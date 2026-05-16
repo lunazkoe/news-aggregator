@@ -77,10 +77,10 @@ public class InterestService {
         log.info("Registering new interest: {}", request.name());
 
         // TODO: 중복 이름 검증 (유사도 기반)
-        if (interestRepository.existsBySimilarName(request.name())) {
-            log.warn("Interest name already exists: {}", request.name());
-            throw new InterestException(InterestErrorCode.EXIST_SIMILARITY_NAME, Map.of("name", request.name()));
-        }
+//        if (interestRepository.existsBySimilarName(request.name())) {
+//            log.warn("Interest name already exists: {}", request.name());
+//            throw new InterestException(InterestErrorCode.EXIST_SIMILARITY_NAME, Map.of("name", request.name()));
+//        }
 
         Interest newInterest = Interest.builder()
                 .name(request.name())
@@ -90,7 +90,7 @@ public class InterestService {
         Interest savedInterest = interestRepository.save(newInterest);
 
         // TODO: 등록 직후이므로 구독 여부는 false로 설정
-        // - 왜 인지 모르겠지만 API Spec에서 테스트하니깐 null로 반환이 되네
+        // - 왜 인지 모르겠지만 API Spec은 null로 반환을 하고 있음
         return InterestDto.from(savedInterest, false);
     }
 
@@ -130,6 +130,7 @@ public class InterestService {
         // - 추가 쿼리가 발생하지 않음
 
         // 관심사 구독 시 이벤트 발행
+        // TODO: 그냥 History로 만들어서 던지면 따로 수정하지 않아도 될 것 같지만, 현재 사용사 활동 내역 정책이 미결정 되어 일단 유지 (추후 mutable count를 어떻게 처리할지에 대한 내용이 필요할 듯)
         eventPublisher.publishEvent(new SubscriptionEvent(
                 foundUser.getId(),
                 newSubscription.getId(),

@@ -16,4 +16,6 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, UUID
     Optional<Subscription> findByUserIdAndInterestId(UUID userId, UUID interestId);
 
     List<Subscription> findTop10ByUserIdOrderByCreatedAtDesc(UUID userId);
+
+    List<Subscription> findAllByInterestId(UUID interestId);
 }

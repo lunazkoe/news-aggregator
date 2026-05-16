@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
+// TODO: 인덱스 설계 (user_id, interest_id)의 조회 빈도에 따라 순서 변동
 @Table(name = "subscriptions",
         indexes = {
             @Index(
@@ -30,6 +31,7 @@ public class Subscription {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    // TODO: 논리 / 물리 삭제 시 연관관계 주의
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;

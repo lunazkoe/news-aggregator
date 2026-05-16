@@ -3,7 +3,13 @@ package com.lunazkoe.newsaggregator.batch.collector;
 import com.lunazkoe.newsaggregator.domain.article.entity.Article;
 import com.lunazkoe.newsaggregator.domain.article.entity.Source;
 import com.lunazkoe.newsaggregator.domain.article.repository.ArticleRepository;
+import com.lunazkoe.newsaggregator.domain.interest.entity.Interest;
+import com.lunazkoe.newsaggregator.domain.interest.entity.Subscription;
 import com.lunazkoe.newsaggregator.domain.interest.repository.InterestRepository;
+import com.lunazkoe.newsaggregator.domain.interest.repository.SubscriptionRepository;
+import com.lunazkoe.newsaggregator.domain.notification.entity.Notification;
+import com.lunazkoe.newsaggregator.domain.notification.entity.ResourceType;
+import com.lunazkoe.newsaggregator.global.common.event.NotificationCreateEvent;
 import com.lunazkoe.newsaggregator.infra.externalapi.naver.client.NaverNewsClient;
 import com.lunazkoe.newsaggregator.infra.externalapi.naver.dto.NaverNewsItem;
 import com.lunazkoe.newsaggregator.infra.externalapi.naver.dto.NaverNewsResponse;
@@ -12,8 +18,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.util.HtmlUtils;
 
 import java.time.LocalDateTime;
@@ -31,12 +39,18 @@ public class NewsCollectorService {
     private final RssNewsParser rssNewsParser;
     private final InterestRepository interestRepository;
     private final ArticleRepository articleRepository;
+    private final ApplicationEventPublisher eventPublisher;
+    private final TransactionTemplate transactionTemplate;
+    // - 이벤트를 발행해야하는데 트랜잭션이 종료되고 발행된 이벤트를 실행해야하기 때문에 트랜잭션이 있어야하긴 함
+    // - 근데 전체에 트랜잭션을 걸면 문제가 발생할 수 있기 때문에 따로 열어주기
+    // - 궁금증: 그냥 저장하는 메소드를 따로 만들고 @Transactional을 메서드에 붙여주면 되는 거 아닌가?
 
     // 한국경제 RSS URL (예시임)
     private static final String HANKYUNG_RSS_URL = "https://rss.hankyung.com/feed/it.xml";
 
     // 네이버 날짜 포맷 파싱용
     private static final DateTimeFormatter NAVER_DATE_FORMATTER = DateTimeFormatter.RFC_1123_DATE_TIME;
+    private final SubscriptionRepository subscriptionRepository;
 
     @Value("${external-api.naver.client-id}")
     private String naverClientId;
@@ -51,33 +65,55 @@ public class NewsCollectorService {
         log.info("[뉴스 수집 배치 시작] 시간당 뉴스 수집을 시작합니다.");
 
         try {
-            // 등록된 모든 관심사 키워드 조회 (다음 스텝 구현)
-            Set<String> allKeywords = getAllInterestKeywords();
-            if (allKeywords.isEmpty()) {
-                log.info("[뉴스 수집 배치] 등록된 관심사 키워드가 없어 수집을 생략합니다.");
+            List<Interest> interests = interestRepository.findAll().stream().toList();
+
+            if (interests.isEmpty()) {
+                log.info("[뉴스 수집 배치] 등록된 관심사가 없어 수집을 생략합니다.");
                 return;
             }
 
-            ArrayList<Article> newsArticles = new ArrayList<>();
+            // 관심사 단위로 루프를 돌며 뉴스를 수집
+            for (Interest interest : interests) {
+                List<Article> fetchedArticles = new ArrayList<>();
 
-            // 키워드 기반으로 네이버 뉴스 API 수집
-            newsArticles.addAll(collectFromNaver(allKeywords));
+                // 해당 관심사에 속한 키워드들로 API 호출 (트랜잭션 없이 진행됨 => 커넥션 안전)
+                for (String keyword : interest.getKeywords()) {
+                    fetchedArticles.addAll(collectFromNaver(keyword));
+                }
 
-            // 고정된 RSS 피드 파싱 및 저장 ((한국경제)
-//            newsArticles.addAll(collectFromRss(HANKYUNG_RSS_URL, Source.HANKYUNG));
+                // 중복 필터링
+                List<Article> articlesToSave = filterExistingArticles(fetchedArticles);
 
-            // DB 저장 전 URL 기준 중복 필터링 (이미 DB에 있는 기사 제외)
-            List<Article> articlesToSave = filterExistingArticles(newsArticles);
+                // 저장할 기사가 있다면 저장 + 이벤트 발행 구간만 트랜잭션으로 묶어줌
+                if (!articlesToSave.isEmpty()) {
+                    transactionTemplate.executeWithoutResult(status -> {
+                        // 기사 저장
+                        articleRepository.saveAll(articlesToSave);
+                        log.info("[뉴스 수집 배치] '{}' 관련 새로운 뉴스 {}건 DB 적재 완료.", interest.getName(), articlesToSave.size());
 
-            // 최종 적재
-            if (!articlesToSave.isEmpty()) {
-                articleRepository.saveAll(articlesToSave);
-                log.info("[뉴스 수집 배치 완료] 새로운 뉴스 {}건이 DB에 적재되었습니다.", articlesToSave.size());
-            } else {
-                log.info("[뉴스 수집 배치 완료] 새로 적재할 뉴스 기사가 없습니다.");
+                        // 알림 발송: 해당 관심사를 구독 중인 유저 조회
+                        List<Subscription> subscriptions = subscriptionRepository.findAllByInterestId(interest.getId());
+
+                        if (!subscriptions.isEmpty()) {
+                            String content = String.format("[%s]와 관련된 기사가 %d건 등록되었습니다.", interest.getName(), articlesToSave.size());
+
+                            for (Subscription sub : subscriptions) {
+                                eventPublisher.publishEvent(new NotificationCreateEvent(
+                                        sub.getUser().getId(), // TODO: N+1 문제 발생하지 않나?
+                                        content,
+                                        ResourceType.INTEREST,
+                                        interest.getId()
+                                ));
+                                // TODO: 여기서 이벤트를 발행을 하고 비동기로 실행되는 건 이해햇는데, 너무 많은 유저에게 일일히 하면 뭔가 성능 문제가 있진 않을까?
+                            }
+                            log.info("[Event Published] 관심사 '{}' 새 기사 알림 이벤트 발행 완료. 발송 대상: {}명", interest.getName(), subscriptions.size());
+                        }
+                    });
+                }
             }
 
             log.info("[뉴스 수집 배치 완료] 모든 데이터 수집 및 적재가 정상 종료되었습니다.");
+
         } catch (Exception e) {
             log.error("[뉴스 수집 배치 실패] 원인: {}", e.getMessage(), e);
         } finally {
@@ -92,29 +128,28 @@ public class NewsCollectorService {
                 .collect(Collectors.toSet());
     }
 
-    private List<Article> collectFromNaver(Set<String> keywords) {
+    // TODO: 각 관심사에 키워드가 여러 개 등록 될 수 있음
+    // - 예를 들어 100개의 관심사에 각 키워드가 100개씩 있다면?
+    // - 100 * 100번 검색을 시도해야하는 것이 아닌가? 이게 맞나?
+    private List<Article> collectFromNaver(String keyword) {
         List<Article> naverArticles = new ArrayList<>();
+        try {
+            NaverNewsResponse response = naverNewsClient.searchNews(
+                    naverClientId, naverClientSecret, keyword, 10, 1, "date");
 
-        for (String keyword : keywords) {
-            try {
-                // 각 키워드별로 10개씩 최신순으로 가져옴
-                NaverNewsResponse response = naverNewsClient.searchNews(
-                        naverClientId, naverClientSecret, keyword, 10, 1, "date");
-
-                if (response != null && response.items() != null) {
-                    for (NaverNewsItem item : response.items()) {
-                        naverArticles.add(Article.builder()
-                                .source(Source.NAVER)
-                                .sourceUrl(item.originallink()) // 원본 링크를 고유 식별자로 사용
-                                .title(cleanHtmlTags(item.title()))
-                                .summary(cleanHtmlTags(item.description()))
-                                .publishDate(parseNaverDate(item.pubDate()))
-                                .build());
-                    }
+            if (response != null && response.items() != null) {
+                for (NaverNewsItem item : response.items()) {
+                    naverArticles.add(Article.builder()
+                            .source(Source.NAVER)
+                            .sourceUrl(item.originallink())
+                            .title(cleanHtmlTags(item.title()))
+                            .summary(cleanHtmlTags(item.description()))
+                            .publishDate(parseNaverDate(item.pubDate()))
+                            .build());
                 }
-            } catch (Exception e) {
-                log.warn("[Naver API 수집 실패] 키워드: {}, 에러: {}", keyword, e.getMessage());
             }
+        } catch (Exception e) {
+            log.warn("[Naver API 수집 실패] 키워드: {}, 에러: {}", keyword, e.getMessage());
         }
         return naverArticles;
     }

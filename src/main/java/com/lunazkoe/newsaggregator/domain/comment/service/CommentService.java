@@ -15,6 +15,7 @@ import com.lunazkoe.newsaggregator.domain.comment.exception.CommentErrorCode;
 import com.lunazkoe.newsaggregator.domain.comment.exception.CommentException;
 import com.lunazkoe.newsaggregator.domain.comment.repository.CommentLikeRepository;
 import com.lunazkoe.newsaggregator.domain.comment.repository.CommentRepository;
+import com.lunazkoe.newsaggregator.domain.notification.entity.ResourceType;
 import com.lunazkoe.newsaggregator.domain.user.entity.User;
 import com.lunazkoe.newsaggregator.domain.user.exception.UserErrorCode;
 import com.lunazkoe.newsaggregator.domain.user.exception.UserException;
@@ -22,6 +23,7 @@ import com.lunazkoe.newsaggregator.domain.user.repository.UserRepository;
 import com.lunazkoe.newsaggregator.global.common.dto.CursorPageResponse;
 import com.lunazkoe.newsaggregator.global.common.event.CommentCreatedEvent;
 import com.lunazkoe.newsaggregator.global.common.event.CommentLikedEvent;
+import com.lunazkoe.newsaggregator.global.common.event.NotificationCreateEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -157,6 +159,28 @@ public class CommentService {
                 newCommentLike.getCreatedAt(),
                 foundComment.getCreatedAt()
         ));
+
+        // 댓글 좋아요 시 알림 발송
+        // - 자기 자신의 댓글에 좋아요를 누른 것이 아닐 때만 알림 발송
+        if (!foundComment.getUser().getId().equals(userId)) {
+            StringBuilder stringBuilder = new StringBuilder();
+            String content = stringBuilder.append("[")
+                    .append(foundUser.getNickname())
+                    .append("]님이 나의 댓글을 좋아합니다.")
+                    .toString();
+
+            eventPublisher.publishEvent(new NotificationCreateEvent(
+                    foundComment.getUser().getId(), // 댓글을 쓴 유저에게
+                    content,
+                    ResourceType.COMMENT, // 리소스 타입: 댓글
+                    foundComment.getId()
+            ));
+
+            log.info("[Event Published] NotificationCreateEvent for Comment Like. receiverId: {}, commentId: {}",
+                    foundComment.getUser().getId(), foundComment.getId());
+        }
+        // - 핵심: 댓글 서비스는 알림 서비스의 의존성을 주입받는 것이 아니라 이벤트만 던지고 끝남
+        // - Decoupling
 
         return CommentLikeDto.from(newCommentLike);
         // - 완성된 객체기 때문에 추가 쿼리가 발생하는 그런 문제는 없을 것으로 예상

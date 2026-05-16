@@ -16,7 +16,7 @@ public class UserActivityEventListener {
 
     private final UserActivityService userActivityService;
 
-    @Async
+    @Async("notificationTaskExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleUserRegisteredEvent(UserRegisteredEvent event) {
         log.info("비동기 이벤트 수신 [회원 가입 확인 후 MongoDB 활동 내역서 발급] userId: {}", event.userId());
