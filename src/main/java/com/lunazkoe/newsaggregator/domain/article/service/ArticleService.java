@@ -2,6 +2,7 @@ package com.lunazkoe.newsaggregator.domain.article.service;
 
 import com.lunazkoe.newsaggregator.domain.article.dto.request.ArticleSearchCondition;
 import com.lunazkoe.newsaggregator.domain.article.dto.response.ArticleDto;
+import com.lunazkoe.newsaggregator.domain.article.dto.response.ArticleRestoreResultDto;
 import com.lunazkoe.newsaggregator.domain.article.dto.response.ArticleViewDto;
 import com.lunazkoe.newsaggregator.domain.article.entity.Article;
 import com.lunazkoe.newsaggregator.domain.article.entity.ArticleView;
@@ -15,13 +16,19 @@ import com.lunazkoe.newsaggregator.domain.user.exception.UserException;
 import com.lunazkoe.newsaggregator.domain.user.repository.UserRepository;
 import com.lunazkoe.newsaggregator.global.common.dto.CursorPageResponse;
 import com.lunazkoe.newsaggregator.global.common.event.ArticleViewedEvent;
+import com.lunazkoe.newsaggregator.infra.s3.S3BackupDownloader;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -32,6 +39,7 @@ public class ArticleService {
     private final ArticleViewRepository articleViewRepository;
     private final UserRepository userRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final S3BackupDownloader s3BackupDownloader;
 
     /**
      * 기사 뷰 등록
@@ -165,7 +173,23 @@ public class ArticleService {
     /**
      * 뉴스 복구
      */
-    // TODO: 뉴스 복구
+    @Transactional
+    public List<ArticleRestoreResultDto> restoreArticles(LocalDateTime from, LocalDateTime to) {
+        log.info("Starting article restore process from {} to {}", from, to);
+
+        List<ArticleRestoreResultDto> results = new ArrayList<>();
+
+        // from ~ to 사이의 날짜를 하루씩 순회하면 복구를 진행
+        LocalDate startDate = from.toLocalDate();
+        LocalDate endDate = to.toLocalDate();
+
+        for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
+            results.add(processDailyRestore(date));
+        }
+
+        log.info("Article restore process completed.");
+        return results;
+    }
 
     /**
      * 뉴스 기사 물리 삭제
@@ -190,5 +214,49 @@ public class ArticleService {
     private Article foundArticle(UUID articleId) {
         return articleRepository.findById(articleId)
                 .orElseThrow(() -> new ArticleException(ArticleErrorCode.ARTICLE_NOT_FOUND, Map.of("id", articleId)));
+    }
+
+    private ArticleRestoreResultDto processDailyRestore(LocalDate targetDate) {
+        // 1. S3에서 해당 날짜의 백업 데이터 다운로드
+        String datePath = targetDate.format(DateTimeFormatter.ofPattern("yyyy/MM/dd"));
+        String s3Key = String.format("backups/articles/%s/article_backup.json.gz", datePath);
+
+        List<Article> s3Articles = s3BackupDownloader.downloadAndDecompressBackup(s3Key);
+
+        if (s3Articles.isEmpty()) {
+            log.info("No backup data found in S3 for date: {}", targetDate);
+            return new ArticleRestoreResultDto(targetDate.atStartOfDay(), List.of(), 0L);
+        }
+
+        // 2. 현재 DB에 존재하는 해당 날짜의 기사 조회 (중복 확인용)
+        LocalDateTime startOfDay = targetDate.atStartOfDay();
+        LocalDateTime endOfDay = targetDate.atTime(LocalTime.MAX);
+        List<Article> dbArticles = articleRepository.findAllByCreatedAtBetween(startOfDay, endOfDay);
+
+        // 3. 차집합 알고리즘 (S3에는 있지만 DB에는 없는 데이터 찾기)
+        // 성능을 위해 DB에 있는 기사들의 sourceUrl을 Set으로 추출 (sourceUrl은 Unique 제약조건이 있음)
+        Set<String> dbArticleSourceUrls = dbArticles.stream()
+                .map(Article::getSourceUrl)
+                .collect(Collectors.toSet());
+
+        // S3 데이터 중 DB에 없는 것만 필터링
+        List<Article> articlesToRestore = s3Articles.stream()
+                .filter(article -> !dbArticleSourceUrls.contains(article.getSourceUrl()))
+                // 식별자는 새로 발급(DB 자동생성 전략에 따라 다를 수 있으나, 일반적으로 새 ID를 부여하거나 기존 ID를 유지)
+                // 만약 기존 ID를 유지해야 한다면 EntityManager.persist 대신 EntityManager.merge를 사용해야 할 수도 있습니다.
+                // 여기서는 객체 상태를 그대로 saveAll 처리합니다. (JPA가 isNew로 판단하여 insert 수행)
+                .toList();
+
+        // 4. 복구할 데이터가 있다면 DB에 일괄 저장 (Bulk Insert 활용 권장)
+        if (!articlesToRestore.isEmpty()) {
+            articleRepository.saveAll(articlesToRestore);
+            log.info("Successfully restored {} articles for date: {}", articlesToRestore.size(), targetDate);
+        } else {
+            log.info("No missing articles found for date: {}. DB is up-to-date.", targetDate);
+        }
+
+        // 5. 복구 결과 DTO 생성 및 반환
+        List<UUID> restoredIds = articlesToRestore.stream().map(Article::getId).toList();
+        return new ArticleRestoreResultDto(targetDate.atStartOfDay(), restoredIds, (long)restoredIds.size());
     }
 }
